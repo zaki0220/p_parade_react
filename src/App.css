@@ -1,0 +1,316 @@
+@import url('https://fonts.googleapis.com/css2?family=Kavoon&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap');
+
+#tab-view {
+	background-color: #ffffff;
+	min-height: 100vh;
+}
+
+#tab-view.lottery-active {
+	background-color: #BCE981;
+}
+
+.tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	margin-left: 36px;
+}
+
+.tab {
+	padding: 8px 16px;
+	cursor: pointer;
+	border: 2px solid #555;
+	border-radius: 8px;
+	background-color: #f0f0f0;
+	color: #333;
+	font-weight: 600;
+	transition: all 0.2s;
+	margin-top: 12px;
+}
+
+.tab:hover {
+	background-color: #e0e0ff;
+}
+
+.tab.active {
+	background-color: #FFDD7B;
+	border-color: #333;
+	color: #000;
+}
+
+.tab-content {
+	margin-left: 24px;
+	display: none;
+}
+
+.tab-content.active {
+	display: block;
+}
+
+.tab-page {
+	min-height: calc(100vh - 96px);
+}
+
+.other-tab-page {
+	padding: 20px;
+}
+
+.logo-img {
+	max-height: 200px;
+	width: auto;
+}
+
+.image-block {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	margin-left: 12px;
+}
+
+.lottery-top-section {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	gap: 20px;
+}
+
+.lottery-control-panel {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 15px;
+	margin-left: 12px;
+}
+
+.lot-btn {
+	padding: 10px 20px;
+	margin-top: 12px;
+	border-radius: 8px;
+	border: none;
+	cursor: pointer;
+	font-weight: bold;
+	color: white;
+	transition: 0.2s;
+}
+
+#btn-lot-confirmed {
+	background-color: #eb5757;
+}
+
+#btn-lot-priority {
+	background-color: #f2994a;
+}
+
+#btn-lot-regular {
+	background-color: #27ae60;
+}
+
+#register-appearance {
+	background-color: #3498db;
+	margin-left: 24px;
+}
+
+#clear-lottery {
+	background-color: #555555;
+}
+
+.lot-btn:hover {
+	opacity: 0.8;
+	transform: translateY(-2px);
+}
+
+#vol-text {
+	font-family: 'Kavoon', cursive;
+	font-size: 80px;
+	letter-spacing: 1px;
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+}
+
+.vol-label {
+	color: #FFFFFF;
+	-webkit-text-stroke: 1.8px #000000;
+}
+
+.vol-count {
+	color: #FFDD7B;
+	-webkit-text-stroke: 1.8px #000000;
+}
+
+.special-enable-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.toggle-switch-input {
+	display: none;
+}
+
+.toggle-switch-label {
+	display: inline-block;
+	position: relative;
+	width: 50px;
+	height: 26px;
+	background-color: #ccc;
+	border-radius: 13px;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+}
+
+.toggle-switch-label::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 22px;
+	height: 22px;
+	background-color: white;
+	border-radius: 50%;
+	transition: left 0.3s ease;
+}
+
+.toggle-switch-input:checked + .toggle-switch-label {
+	background-color: #27ae60;
+}
+
+.toggle-switch-input:checked + .toggle-switch-label::after {
+	left: 26px;
+}
+
+.special-enable-label {
+	margin-left: 8px;
+	cursor: pointer;
+	user-select: none;
+}
+
+#lottery-table {
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 35px;
+	font-weight: lighter;
+	border-collapse: collapse;
+	width: 75%;
+	table-layout: fixed;
+	margin: 0 0 0 12px;
+	background-color: #ffffff;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+	margin-top: 6px;
+}
+
+#lottery-container {
+	margin-top: 20px;
+}
+
+#lottery-table tr {
+	height: 85px;
+}
+
+#lottery-table td {
+	height: 85px;
+	text-align: center;
+	vertical-align: middle;
+	border: 1px solid #ddd;
+}
+
+.lottery-select-btn {
+	height: 40px;
+	line-height: 40px;
+	font-size: 14px;
+}
+
+#lottery-table td:first-child {
+	width: 15%;
+	background-color: #90FFF4;
+}
+
+#lottery-table td:last-child {
+	width: 85%;
+	background-color: transparent;
+}
+
+.spare-slot-header {
+	margin: 20px 0 6px 24px;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 24px;
+	font-weight: 700;
+}
+
+/* --- 抽選テーブルの行タイプ別設定 --- */
+
+/* 1. 準レギュラー枠（1行目）: 少し毎いめの青 */
+.row-semi-regular td:first-child {
+	background-color: #56CCF2 !important;
+}
+
+/* 2. 通常枠（2～7行目）: 現状維持（#90FFF4） */
+.row-regular td:first-child {
+	background-color: #90FFF4;
+}
+
+
+/* 4. 補欠枠（8～10行目）: オレンジ・黄色系で区別 */
+.row-backup td:first-child {
+	background-color: #FFD180 !important;
+}
+
+/* 共通：名前が入った時の文字サイズ調整 */
+#lottery-table td:first-child {
+	font-family: 'Kosugi Maru', sans-serif;
+	font-size: 35px;
+	color: #333;
+}
+
+/* --- 音量調節 --- */
+.volume-control-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.volume-icon {
+	font-size: 24px;
+}
+
+.volume-slider {
+	flex: 1;
+	max-width: 300px;
+	height: 6px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: #ddd;
+	border-radius: 3px;
+	outline: none;
+	cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 18px;
+	height: 18px;
+	background: #27ae60;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+	background: #229954;
+}
+
+.volume-slider::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	background: #27ae60;
+	border-radius: 50%;
+	border: none;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+	background: #229954;
+}
+
