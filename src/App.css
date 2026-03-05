@@ -314,3 +314,175 @@
 	background: #229954;
 }
 
+/* アイドル抽選ボタン */
+.lottery-execution-btn {
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 20px;
+	padding: 10px 20px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: bold;
+	background-color: #FFDD78;
+	transition: 0.2s;
+	border: 2px solid #000;
+	color: #333;
+}
+
+.lottery-execution-btn:hover {
+	background-color: #FFCC44;
+	transform: scale(1.05);
+}
+
+.lottery-execution-btn:active {
+	transform: scale(0.98);
+}
+
+/* Modal Dialog Styles */
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.modal-dialog {
+	background-color: #fff;
+	border-radius: 12px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	max-width: 400px;
+	width: 90%;
+	overflow: hidden;
+	animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+	from {
+		transform: translateY(-50px);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.modal-header {
+	background-color: #FFDD7B;
+	padding: 16px;
+	border-bottom: 2px solid #ddd;
+}
+
+.modal-header h3 {
+	margin: 0;
+	font-size: 18px;
+	color: #333;
+	font-weight: 600;
+}
+
+.modal-body {
+	padding: 24px 16px;
+	text-align: center;
+}
+
+.modal-body p {
+	margin: 0;
+	font-size: 16px;
+	color: #555;
+	line-height: 1.5;
+}
+
+.modal-footer {
+	padding: 16px;
+	text-align: right;
+	border-top: 1px solid #eee;
+}
+
+.modal-btn {
+	background-color: #51cf66;
+	color: white;
+	border: none;
+	padding: 10px 24px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 14px;
+	transition: all 0.2s;
+}
+
+.modal-btn:hover {
+	background-color: #40c057;
+	transform: scale(1.02);
+}
+
+.modal-btn:active {
+	transform: scale(0.98);
+}
+
+.modal-btn-cancel {
+	background-color: #adb5bd;
+	margin-right: 8px;
+}
+
+.modal-btn-cancel:hover {
+	background-color: #868e96;
+}
+
+.modal-btn-danger {
+	background-color: #ff6b6b;
+}
+
+.modal-btn-danger:hover {
+	background-color: #ff5252;
+}
+
+/* ------------------------------------------------------------------
+   Full HD (1920×1080) scaling
+   ─────────────────────────────────────────────────────────────────
+   The original styles were designed for WQHD (2560×1440).  On a
+   Full‑HD display the UI would appear 25% larger, so we scale everything
+   down to maintain the same visual proportions.  The transform approach
+   keeps all element ratios intact without rewriting every hard‑coded
+   pixel value.
+
+   The `width:133.33%` counteracts the shrinkage so the page still fills
+   the viewport horizontally.  Heights automatically behave due to the
+   scale factor.
+
+   Note: if you prefer a different scaling strategy (root font‑size,
+   CSS variables, etc.) you can adjust the factor here.
+   ------------------------------------------------------------------ */
+@media screen and (max-width: 1920px) and (max-height: 1080px) {
+    body {
+        transform: scale(0.75);
+        transform-origin: top left;
+        width: 133.3333%; /* inverse of 0.75 */
+        /* ensure minimum height expands to account for scaling */
+        min-height: calc(100vh / 0.75);
+    }
+    /* ensure tab view also stretches under scaling */
+    #tab-view {
+        min-height: calc(100vh / 0.75);
+        width: 100%;
+    }
+
+    /* compensate overlays and videos for the body scale so they
+       continue to cover the real viewport */
+    #puchun-overlay,
+    #click-overlay,
+    #deresute-overlay {
+        width: calc(100vw / 0.75);
+        height: calc(100vh / 0.75);
+    }
+    #puchun-video,
+    #click-video,
+    #deresute-video {
+        width: 100%;
+        height: 100%;
+    }
+}
