@@ -31,12 +31,28 @@ type Performer = {
 
 type IdolLotteryResult = { name: string; id: string }[] | 'none'
 
-function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, idols, setIdols, idolLotteryResults, setIdolLotteryResults }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void }) {
+function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void }) {
   const logoPath = `${import.meta.env.BASE_URL}etc/NewP_Parade_logo.png`
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
   const [showNoRegularDialog, setShowNoRegularDialog] = useState(false)
-  const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false) // ボタン位置ごとの抽選結果
+  const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false)
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false)
+  const [showPuchunVideo, setShowPuchunVideo] = useState(false)
+  const [showTouchVideo, setShowTouchVideo] = useState(false)
+  const [pendingLotteryRow, setPendingLotteryRow] = useState<number | null>(null) // ボタン位置ごとの抽選結果
+
+  // Prevent scrolling when video overlay is active
+  useEffect(() => {
+    if (showVideoOverlay || showPuchunVideo || showTouchVideo) {
+      document.body.classList.add('overlay-active')
+    } else {
+      document.body.classList.remove('overlay-active')
+    }
+    return () => {
+      document.body.classList.remove('overlay-active')
+    }
+  }, [showVideoOverlay, showPuchunVideo, showTouchVideo])
 
   const handleConfirmedWin = () => {
     // 確定ステータスを持つ演者名を取得
@@ -74,6 +90,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const handleConfirmClear = () => {
     setLotteryTableData([])
     setIdolLotteryResults({})
+    setAppearanceCheckStates({})
+    localStorage.removeItem('idolLotteryData')
     setShowClearConfirmDialog(false)
   }
 
@@ -143,12 +161,18 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   }
 
   const handleIdolLottery = (rowIndex: number) => {
+    // 動画を表示して、動画終了後に抽選を実行
+    setPendingLotteryRow(rowIndex)
+    setShowVideoOverlay(true)
+  }
+
+  const executeLottery = (rowIndex: number): boolean => {
     // 前回抽選がFalseで、抽選済みがFalseのアイドルを取得
     const availableIdols = idols.filter(idol => idol.prev !== true && idol.done !== true)
 
     if (availableIdols.length === 0) {
       setIdolLotteryResults({ ...idolLotteryResults, [rowIndex]: 'none' })
-      return
+      return false
     }
 
     // 最大3人をランダムに選ぶ
@@ -176,6 +200,51 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     // 名前とIDをペアで保存
     const result = selectedIdols.map(idol => ({ name: idol.name, id: idol.id || '' }))
     setIdolLotteryResults({ ...idolLotteryResults, [rowIndex]: result })
+
+    // 行の1列目の名前を取得
+    let rowName = ''
+    if (rowIndex === 0) {
+      rowName = selectedPureRegular
+    } else if (rowIndex >= 1 && rowIndex <= 6) {
+      rowName = lotteryTableData[rowIndex - 1] || ''
+    } else if (rowIndex >= 7) {
+      rowName = lotteryTableData[6 + (rowIndex - 7)] || ''
+    }
+
+    // LocalStorageに保存
+    if (rowName) {
+      const storageData = JSON.parse(localStorage.getItem('idolLotteryData') || '{}')
+      storageData[rowName] = result
+      localStorage.setItem('idolLotteryData', JSON.stringify(storageData))
+    }
+    console.log(localStorage.getItem('idolLotteryData'))
+
+    // id:2046が含まれているか確認し、50%の確率でtrueを返す
+    const has2046 = selectedIdols.some(idol => String(idol.id) === '2046')
+    console.log(selectedIdols)
+    return has2046 && Math.random() < 0.5
+  }
+
+  const handleVideoEnd = () => {
+    setShowVideoOverlay(false)
+    if (pendingLotteryRow !== null) {
+      const shouldShowPuchunVideo = executeLottery(pendingLotteryRow)
+      setPendingLotteryRow(null)
+      
+      // deresute.webm終了後、条件を満たせばpuchun.mp4を表示
+      if (shouldShowPuchunVideo) {
+        setShowPuchunVideo(true)
+      }
+    }
+  }
+
+  const handlePuchunVideoEnd = () => {
+    setShowPuchunVideo(false)
+    setShowTouchVideo(true)
+  }
+
+  const handleTouchVideoClick = () => {
+    setShowTouchVideo(false)
   }
 
   const renderIdolImages = (result: IdolLotteryResult) => {
@@ -272,6 +341,36 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
   return (
     <section className="tab-page">
+      {showVideoOverlay && (
+        <div className="video-overlay">
+          <video
+            className="fullscreen-video"
+            autoPlay
+            onEnded={handleVideoEnd}
+            src={`${import.meta.env.BASE_URL}movie/deresute.webm`}
+          />
+        </div>
+      )}
+      {showPuchunVideo && (
+        <div className="video-overlay">
+          <video
+            className="fullscreen-video"
+            autoPlay
+            onEnded={handlePuchunVideoEnd}
+            src={`${import.meta.env.BASE_URL}movie/puchun.mp4`}
+          />
+        </div>
+      )}
+      {showTouchVideo && (
+        <div className="video-overlay" onClick={handleTouchVideoClick}>
+          <video
+            className="fullscreen-video"
+            autoPlay
+            loop
+            src={`${import.meta.env.BASE_URL}movie/touch.mp4`}
+          />
+        </div>
+      )}
       {showNoTargetDialog && (
         <div className="modal-overlay" onClick={() => setShowNoTargetDialog(false)}>
           <div className="modal-dialog">
@@ -669,10 +768,147 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
   )
 }
 
-function AppearancePage() {
+function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegular, idols, setIdols, appearanceCheckStates, setAppearanceCheckStates }: { idolLotteryResults: { [key: number]: IdolLotteryResult }; lotteryTableData: string[]; selectedPureRegular: string; idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void }) {
+  const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
+
+  // rowIndexから対応する名前を取得
+  const getNameByRowIndex = (rowIndex: number): string => {
+    if (rowIndex === 0) {
+      return selectedPureRegular
+    } else if (rowIndex >= 1 && rowIndex <= 6) {
+      return lotteryTableData[rowIndex - 1] || ''
+    } else if (rowIndex >= 7) {
+      return lotteryTableData[6 + (rowIndex - 7)] || ''
+    }
+    return ''
+  }
+
+  // 出演登録ボタンクリック時の処理（確認ダイアログを表示）
+  const handleRegisterClick = () => {
+    setShowRegisterConfirmDialog(true)
+  }
+
+  // 確認後の出演登録処理
+  const handleConfirmRegister = () => {
+    // 1. 抽選アイドル管理タブのチェックボックスを全てリセット
+    const resetIdols = idols.map((idol) => ({
+      ...idol,
+      prev: false,
+      done: false,
+    }))
+
+    // 2. チェックが入っている行のアイドルを特定
+    const checkedIdolNames = new Set<string>()
+    Object.entries(appearanceCheckStates).forEach(([rowIndexStr, isChecked]) => {
+      if (isChecked) {
+        const rowIndex = Number(rowIndexStr)
+        const result = idolLotteryResults[rowIndex]
+        if (result !== 'none' && result.length > 0) {
+          result.forEach((idol) => {
+            checkedIdolNames.add(idol.name)
+          })
+        }
+      }
+    })
+
+    // 3. チェックされたアイドルの prev を true に設定
+    const updatedIdols = resetIdols.map((idol) => {
+      if (checkedIdolNames.has(idol.name)) {
+        return { ...idol, prev: true }
+      }
+      return idol
+    })
+
+    setIdols(updatedIdols)
+    setShowRegisterConfirmDialog(false)
+  }
+
+  // useEffectでボタンにイベントリスナーを追加
+  useEffect(() => {
+    const registerBtn = document.getElementById('register-appearance')
+    if (registerBtn) {
+      registerBtn.addEventListener('click', handleRegisterClick)
+      return () => {
+        registerBtn.removeEventListener('click', handleRegisterClick)
+      }
+    }
+  }, [appearanceCheckStates, idolLotteryResults])
+
+  // rowIndexごとに行を作成
+  const allEntries = Object.entries(idolLotteryResults)
+    .map(([rowIndexStr, result]) => {
+      const rowIndex = Number(rowIndexStr)
+      const performerName = getNameByRowIndex(rowIndex)
+      
+      const idols = result === 'none' ? [] : result
+      return {
+        rowIndex,
+        performerName,
+        idols,
+      }
+    })
+    .sort((a, b) => a.rowIndex - b.rowIndex)
+
   return (
     <section className="tab-page other-tab-page">
+      {showRegisterConfirmDialog && (
+        <div className="modal-overlay" onClick={() => setShowRegisterConfirmDialog(false)}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>確認</h3>
+            </div>
+            <div className="modal-body">
+              <p>出演者と抽選アイドルを更新しますか？</p>
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)}>キャンセル</button>
+              <button className="modal-btn" onClick={handleConfirmRegister}>更新</button>
+            </div>
+          </div>
+        </div>
+      )}
       <h2>出演管理</h2>
+      <div style={{ marginBottom: '16px', marginLeft: '-24px' }}>
+        <button id="register-appearance" className="lot-btn" type="button">出演登録</button>
+      </div>
+      {allEntries.length > 0 ? (
+        <table style={{ borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>名前</th>
+              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名1</th>
+              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名2</th>
+              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名3</th>
+              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', width: '60px' }}>出演</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allEntries.map((entry, idx) => (
+              <tr key={idx}>
+                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.performerName}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.idols[0]?.name || ''}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.idols[1]?.name || ''}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.idols[2]?.name || ''}</td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={appearanceCheckStates[entry.rowIndex] || false}
+                    onChange={() => {
+                      setAppearanceCheckStates({
+                        ...appearanceCheckStates,
+                        [entry.rowIndex]: !appearanceCheckStates[entry.rowIndex],
+                      })
+                    }}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>出演データはありません</p>
+      )}
     </section>
   )
 }
@@ -808,6 +1044,10 @@ function App() {
     const saved = localStorage.getItem('idolLotteryResults')
     return saved ? JSON.parse(saved) : {}
   })
+  const [appearanceCheckStates, setAppearanceCheckStates] = useState<{ [key: number]: boolean }>(() => {
+    const saved = localStorage.getItem('appearanceCheckStates')
+    return saved ? JSON.parse(saved) : {}
+  })
 
   // GAS APIからデータを取得
   useEffect(() => {
@@ -902,16 +1142,20 @@ function App() {
     localStorage.setItem('idolLotteryResults', JSON.stringify(idolLotteryResults))
   }, [idolLotteryResults])
 
+  useEffect(() => {
+    localStorage.setItem('appearanceCheckStates', JSON.stringify(appearanceCheckStates))
+  }, [appearanceCheckStates])
+
   const renderPage = () => {
     switch (activeTab) {
       case 'lottery':
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} />
       case 'lotteryIdol':
         return <LotteryIdolPage idols={idols} setIdols={setIdols} />
       case 'performer':
         return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} />
       case 'appearance':
-        return <AppearancePage />
+        return <AppearancePage idolLotteryResults={idolLotteryResults} lotteryTableData={lotteryTableData} selectedPureRegular={selectedPureRegular} idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} />
       case 'settings':
         return (
           <SettingsPage
@@ -930,7 +1174,7 @@ function App() {
           />
         )
       default:
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} />
     }
   }
 
