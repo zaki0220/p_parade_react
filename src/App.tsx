@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
@@ -31,7 +31,7 @@ type Performer = {
 
 type IdolLotteryResult = { name: string; id: string }[] | 'none'
 
-function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void }) {
+function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean }) {
   const logoPath = `${import.meta.env.BASE_URL}etc/NewP_Parade_logo.png`
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
@@ -41,6 +41,20 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const [showPuchunVideo, setShowPuchunVideo] = useState(false)
   const [showTouchVideo, setShowTouchVideo] = useState(false)
   const [pendingLotteryRow, setPendingLotteryRow] = useState<number | null>(null) // ボタン位置ごとの抽選結果
+  const deresuteVideoRef = useRef<HTMLVideoElement | null>(null)
+  const puchunVideoRef = useRef<HTMLVideoElement | null>(null)
+  const touchVideoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    const normalizedVolume = Math.min(100, Math.max(0, volume)) / 100
+    const targets = [deresuteVideoRef.current, puchunVideoRef.current, touchVideoRef.current]
+
+    targets.forEach((video) => {
+      if (!video) return
+      video.volume = normalizedVolume
+      video.muted = isMuted
+    })
+  }, [volume, isMuted, showVideoOverlay, showPuchunVideo, showTouchVideo])
 
   // Prevent scrolling when video overlay is active
   useEffect(() => {
@@ -91,6 +105,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     setLotteryTableData([])
     setIdolLotteryResults({})
     setAppearanceCheckStates({})
+    setBackupCheckStates({})
     localStorage.removeItem('idolLotteryData')
     setShowClearConfirmDialog(false)
   }
@@ -344,9 +359,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       {showVideoOverlay && (
         <div className="video-overlay">
           <video
+            ref={deresuteVideoRef}
             className="fullscreen-video"
             autoPlay
             onEnded={handleVideoEnd}
+            muted={isMuted}
             src={`${import.meta.env.BASE_URL}movie/deresute.webm`}
           />
         </div>
@@ -354,9 +371,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       {showPuchunVideo && (
         <div className="video-overlay">
           <video
+            ref={puchunVideoRef}
             className="fullscreen-video"
             autoPlay
             onEnded={handlePuchunVideoEnd}
+            muted={isMuted}
             src={`${import.meta.env.BASE_URL}movie/puchun.mp4`}
           />
         </div>
@@ -364,9 +383,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       {showTouchVideo && (
         <div className="video-overlay" onClick={handleTouchVideoClick}>
           <video
+            ref={touchVideoRef}
             className="fullscreen-video"
             autoPlay
             loop
+            muted={isMuted}
             src={`${import.meta.env.BASE_URL}movie/touch.mp4`}
           />
         </div>
@@ -768,8 +789,38 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
   )
 }
 
-function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegular, idols, setIdols, appearanceCheckStates, setAppearanceCheckStates }: { idolLotteryResults: { [key: number]: IdolLotteryResult }; lotteryTableData: string[]; selectedPureRegular: string; idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void }) {
+function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegular, idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, backupCheckStates, setBackupCheckStates }: { idolLotteryResults: { [key: number]: IdolLotteryResult }; lotteryTableData: string[]; selectedPureRegular: string; idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; backupCheckStates: { [key: number]: boolean }; setBackupCheckStates: (states: { [key: number]: boolean }) => void }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
+
+  const handleAppearanceCheckChange = (rowIndex: number) => {
+    const nextChecked = !appearanceCheckStates[rowIndex]
+    setAppearanceCheckStates({
+      ...appearanceCheckStates,
+      [rowIndex]: nextChecked,
+    })
+
+    if (nextChecked) {
+      setBackupCheckStates({
+        ...backupCheckStates,
+        [rowIndex]: false,
+      })
+    }
+  }
+
+  const handleBackupCheckChange = (rowIndex: number) => {
+    const nextChecked = !backupCheckStates[rowIndex]
+    setBackupCheckStates({
+      ...backupCheckStates,
+      [rowIndex]: nextChecked,
+    })
+
+    if (nextChecked) {
+      setAppearanceCheckStates({
+        ...appearanceCheckStates,
+        [rowIndex]: false,
+      })
+    }
+  }
 
   // rowIndexから対応する名前を取得
   const getNameByRowIndex = (rowIndex: number): string => {
@@ -880,6 +931,7 @@ function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegu
               <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名2</th>
               <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名3</th>
               <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', width: '60px' }}>出演</th>
+              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', width: '60px' }}>補欠</th>
             </tr>
           </thead>
           <tbody>
@@ -893,12 +945,15 @@ function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegu
                   <input
                     type="checkbox"
                     checked={appearanceCheckStates[entry.rowIndex] || false}
-                    onChange={() => {
-                      setAppearanceCheckStates({
-                        ...appearanceCheckStates,
-                        [entry.rowIndex]: !appearanceCheckStates[entry.rowIndex],
-                      })
-                    }}
+                    onChange={() => handleAppearanceCheckChange(entry.rowIndex)}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                  />
+                </td>
+                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={backupCheckStates[entry.rowIndex] || false}
+                    onChange={() => handleBackupCheckChange(entry.rowIndex)}
                     style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                   />
                 </td>
@@ -1048,6 +1103,10 @@ function App() {
     const saved = localStorage.getItem('appearanceCheckStates')
     return saved ? JSON.parse(saved) : {}
   })
+  const [backupCheckStates, setBackupCheckStates] = useState<{ [key: number]: boolean }>(() => {
+    const saved = localStorage.getItem('backupCheckStates')
+    return saved ? JSON.parse(saved) : {}
+  })
 
   // GAS APIからデータを取得
   useEffect(() => {
@@ -1146,16 +1205,20 @@ function App() {
     localStorage.setItem('appearanceCheckStates', JSON.stringify(appearanceCheckStates))
   }, [appearanceCheckStates])
 
+  useEffect(() => {
+    localStorage.setItem('backupCheckStates', JSON.stringify(backupCheckStates))
+  }, [backupCheckStates])
+
   const renderPage = () => {
     switch (activeTab) {
       case 'lottery':
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} />
       case 'lotteryIdol':
         return <LotteryIdolPage idols={idols} setIdols={setIdols} />
       case 'performer':
         return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} />
       case 'appearance':
-        return <AppearancePage idolLotteryResults={idolLotteryResults} lotteryTableData={lotteryTableData} selectedPureRegular={selectedPureRegular} idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} />
+        return <AppearancePage idolLotteryResults={idolLotteryResults} lotteryTableData={lotteryTableData} selectedPureRegular={selectedPureRegular} idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} backupCheckStates={backupCheckStates} setBackupCheckStates={setBackupCheckStates} />
       case 'settings':
         return (
           <SettingsPage
@@ -1174,7 +1237,7 @@ function App() {
           />
         )
       default:
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} />
     }
   }
 
