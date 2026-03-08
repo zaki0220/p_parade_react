@@ -4,6 +4,7 @@ import './App.css'
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyhZ8PUsciHHMgff651G6tjlMjeZRfoo-yeIaq0e3jCdaZ_WSA52e2xcbUJqR50VXe6/exec"
 const PRIORITY_LOSE_THRESHOLD = 3
+const PUCHUN_TRIGGER_ID_LIST = ['2046']
 
 type Idol = {
   id?: string
@@ -234,10 +235,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     }
     console.log(localStorage.getItem('idolLotteryData'))
 
-    // id:2046が含まれているか確認し、50%の確率でtrueを返す
-    const has2046 = selectedIdols.some(idol => String(idol.id) === '2046')
+    // 指定IDが含まれているか確認し、50%の確率でtrueを返す
+    const hasTargetId = selectedIdols.some(idol => PUCHUN_TRIGGER_ID_LIST.includes(String(idol.id)))
     console.log(selectedIdols)
-    return has2046 && Math.random() < 0.5
+    return hasTargetId && Math.random() < 0.5
   }
 
   const handleVideoEnd = () => {
