@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyhZ8PUsciHHMgff651G6tjlMjeZRfoo-yeIaq0e3jCdaZ_WSA52e2xcbUJqR50VXe6/exec"
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhZ8PUsciHHMgff651G6tjlMjeZRfoo-yeIaq0e3jCdaZ_WSA52e2xcbUJqR50VXe6/exec'
 const PRIORITY_LOSE_THRESHOLD = 3
+const PUCHUN_TRIGGER_ID_LIST = ['2046']
 
 type Idol = {
   id?: string
@@ -30,8 +31,20 @@ type Performer = {
 }
 
 type IdolLotteryResult = { name: string; id: string }[] | 'none'
+type PerformerLotteryType = '確定' | '優先' | '通常'
+type LotteryHistory = {
+  performerName?: string
+  type?: string
+  idolIds?: string[]
+  idolNames?: string[]
+  idols?: { id?: string; name?: string }[]
+  idol1Name?: string
+  idol2Name?: string
+  idol3Name?: string
+  [key: string]: unknown
+}
 
-function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void }) {
+function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean }) {
   const logoPath = `${import.meta.env.BASE_URL}etc/NewP_Parade_logo.png`
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
@@ -41,6 +54,20 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const [showPuchunVideo, setShowPuchunVideo] = useState(false)
   const [showTouchVideo, setShowTouchVideo] = useState(false)
   const [pendingLotteryRow, setPendingLotteryRow] = useState<number | null>(null) // ボタン位置ごとの抽選結果
+  const deresuteVideoRef = useRef<HTMLVideoElement | null>(null)
+  const puchunVideoRef = useRef<HTMLVideoElement | null>(null)
+  const touchVideoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    const normalizedVolume = Math.min(100, Math.max(0, volume)) / 100
+    const targets = [deresuteVideoRef.current, puchunVideoRef.current, touchVideoRef.current]
+
+    targets.forEach((video) => {
+      if (!video) return
+      video.volume = normalizedVolume
+      video.muted = isMuted
+    })
+  }, [volume, isMuted, showVideoOverlay, showPuchunVideo, showTouchVideo])
 
   // Prevent scrolling when video overlay is active
   useEffect(() => {
@@ -66,11 +93,13 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     // テーブルに表示されていない確定演者を追加
     const maxRows = isSpecialEnabled ? specialPerformerCount : 9
     const newTableData = [...lotteryTableData]
+    const newLotteryTypes = { ...performerLotteryTypes }
     let addedCount = 0
 
     for (let i = 0; i < confirmedNames.length && newTableData.length < maxRows; i++) {
       if (!displayedNames.has(confirmedNames[i])) {
         newTableData.push(confirmedNames[i])
+        newLotteryTypes[confirmedNames[i]] = '確定'
         addedCount++
       }
     }
@@ -81,6 +110,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     }
 
     setLotteryTableData(newTableData)
+    setPerformerLotteryTypes(newLotteryTypes)
   }
 
   const handleClearLottery = () => {
@@ -89,8 +119,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
   const handleConfirmClear = () => {
     setLotteryTableData([])
+    setPerformerLotteryTypes({})
     setIdolLotteryResults({})
     setAppearanceCheckStates({})
+    setBackupCheckStates({})
     localStorage.removeItem('idolLotteryData')
     setShowClearConfirmDialog(false)
   }
@@ -127,6 +159,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
     // テーブルに追加
     setLotteryTableData([...lotteryTableData, foundName])
+    setPerformerLotteryTypes({
+      ...performerLotteryTypes,
+      [foundName]: '優先',
+    })
   }
 
   const handleRegularWin = () => {
@@ -158,6 +194,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
     // テーブルに追加
     setLotteryTableData([...lotteryTableData, selectedName])
+    setPerformerLotteryTypes({
+      ...performerLotteryTypes,
+      [selectedName]: '通常',
+    })
   }
 
   const handleIdolLottery = (rowIndex: number) => {
@@ -219,10 +259,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     }
     console.log(localStorage.getItem('idolLotteryData'))
 
-    // id:2046が含まれているか確認し、50%の確率でtrueを返す
-    const has2046 = selectedIdols.some(idol => String(idol.id) === '2046')
+    // 指定IDが含まれているか確認し、50%の確率でtrueを返す
+    const hasTargetId = selectedIdols.some(idol => PUCHUN_TRIGGER_ID_LIST.includes(String(idol.id)))
     console.log(selectedIdols)
-    return has2046 && Math.random() < 0.5
+    return hasTargetId && Math.random() < 0.5
   }
 
   const handleVideoEnd = () => {
@@ -344,9 +384,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       {showVideoOverlay && (
         <div className="video-overlay">
           <video
+            ref={deresuteVideoRef}
             className="fullscreen-video"
             autoPlay
             onEnded={handleVideoEnd}
+            muted={isMuted}
             src={`${import.meta.env.BASE_URL}movie/deresute.webm`}
           />
         </div>
@@ -354,9 +396,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       {showPuchunVideo && (
         <div className="video-overlay">
           <video
+            ref={puchunVideoRef}
             className="fullscreen-video"
             autoPlay
             onEnded={handlePuchunVideoEnd}
+            muted={isMuted}
             src={`${import.meta.env.BASE_URL}movie/puchun.mp4`}
           />
         </div>
@@ -364,9 +408,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       {showTouchVideo && (
         <div className="video-overlay" onClick={handleTouchVideoClick}>
           <video
+            ref={touchVideoRef}
             className="fullscreen-video"
             autoPlay
             loop
+            muted={isMuted}
             src={`${import.meta.env.BASE_URL}movie/touch.mp4`}
           />
         </div>
@@ -564,26 +610,26 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
   return (
     <section className="tab-page other-tab-page">
       <h2>抽選アイドル管理</h2>
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label>前回抽選:</label>
-          <select value={prevFilter} onChange={(e) => setPrevFilter(e.target.value as 'all' | 'on' | 'off')}>
+      <div className="idol-filter-row">
+        <div className="idol-filter-group">
+          <label className="appearance-filter-label">前回抽選:</label>
+          <select className="appearance-filter-select" value={prevFilter} onChange={(e) => setPrevFilter(e.target.value as 'all' | 'on' | 'off')}>
             <option value="all">すべて</option>
             <option value="on">ON</option>
             <option value="off">OFF</option>
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label>抽選済:</label>
-          <select value={doneFilter} onChange={(e) => setDoneFilter(e.target.value as 'all' | 'on' | 'off')}>
+        <div className="idol-filter-group">
+          <label className="appearance-filter-label">抽選済:</label>
+          <select className="appearance-filter-select" value={doneFilter} onChange={(e) => setDoneFilter(e.target.value as 'all' | 'on' | 'off')}>
             <option value="all">すべて</option>
             <option value="on">ON</option>
             <option value="off">OFF</option>
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label>ブランド:</label>
-          <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+        <div className="idol-filter-group">
+          <label className="appearance-filter-label">ブランド:</label>
+          <select className="appearance-filter-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
             <option value="all">すべて</option>
             {brands.map((brand) => (
               <option key={brand} value={brand}>
@@ -594,84 +640,61 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
         </div>
       </div>
       <h4>一括操作</h4>
-      <div style={{ marginBottom: '20px' }}>
-        <button onClick={handleResetAllCheckboxes} style={{ marginRight: '10px', padding: '8px 16px', cursor: 'pointer' }}>
+      <div className="idol-bulk-actions">
+        <button id="idol-reset-checks" className="lot-btn" onClick={handleResetAllCheckboxes}>
           全チェック解除
         </button>
-        <button onClick={handleResetOrder} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+        <button id="idol-reset-order" className="lot-btn" onClick={handleResetOrder}>
           ID順にリセット
         </button>
       </div>
       {filteredIdols && filteredIdols.length > 0 ? (
-        <table style={{ borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th
-                style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', width: '80px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleHeaderClick('prev')}
-              >
-                前回抽選
-              </th>
-              <th
-                style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', width: '80px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleHeaderClick('done')}
-              >
-                抽選済み
-              </th>
-              <th
-                style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left', width: nameColumnWidth, cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleHeaderClick('name')}
-              >
-                名前
-              </th>
-              <th
-                style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleHeaderClick('brand')}
-              >
-                ブランド
-              </th>
-              <th
-                style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleHeaderClick('winCount')}
-              >
-                当選回数
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredIdols.map((idol, idx) => (
-              <tr key={idol.id || idx}>
-                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={idol.prev || false}
-                    onChange={() => {
-                      const originalIdx = idols.findIndex((i) => i.id === idol.id)
-                      handlePrevChange(originalIdx)
-                    }}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                </td>
-                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={idol.done || false}
-                    onChange={() => {
-                      const originalIdx = idols.findIndex((i) => i.id === idol.id)
-                      handleDoneChange(originalIdx)
-                    }}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                </td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{idol.name}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{(idol as { brand?: string }).brand || ''}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>{idol.winCount || 0}</td>
+        <div className="appearance-table-wrap idol-table-wrap">
+          <table className="appearance-table idol-table">
+            <thead>
+              <tr>
+                <th className="idol-col-check idol-header-sort" onClick={() => handleHeaderClick('prev')}>前回抽選</th>
+                <th className="idol-col-check idol-header-sort" onClick={() => handleHeaderClick('done')}>抽選済み</th>
+                <th className="idol-header-sort" style={{ width: nameColumnWidth }} onClick={() => handleHeaderClick('name')}>名前</th>
+                <th className="idol-col-brand idol-header-sort" onClick={() => handleHeaderClick('brand')}>ブランド</th>
+                <th className="idol-col-win idol-header-sort" onClick={() => handleHeaderClick('winCount')}>当選回数</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredIdols.map((idol, idx) => (
+                <tr key={idol.id || idx}>
+                  <td className="idol-col-check">
+                    <input
+                      type="checkbox"
+                      checked={idol.prev || false}
+                      onChange={() => {
+                        const originalIdx = idols.findIndex((i) => i.id === idol.id)
+                        handlePrevChange(originalIdx)
+                      }}
+                      className="appearance-check-input"
+                    />
+                  </td>
+                  <td className="idol-col-check">
+                    <input
+                      type="checkbox"
+                      checked={idol.done || false}
+                      onChange={() => {
+                        const originalIdx = idols.findIndex((i) => i.id === idol.id)
+                        handleDoneChange(originalIdx)
+                      }}
+                      className="appearance-check-input"
+                    />
+                  </td>
+                  <td>{idol.name}</td>
+                  <td className="idol-col-brand">{(idol as { brand?: string }).brand || ''}</td>
+                  <td className="idol-col-win">{idol.winCount || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <p>フィルター条件に該当するデータはありません</p>
+        <p className="appearance-empty-message">フィルター条件に該当するデータはありません</p>
       )}
     </section>
   )
@@ -680,9 +703,6 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
 function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers, setPerformers }: { selectedPureRegular: string; setSelectedPureRegular: (val: string) => void; performers: Performer[]; setPerformers: (performers: Performer[]) => void }) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
   const pureRegularOptions = ["colorfu√", "MitsubaProject", "わたげ改", "黒糖"]
-
-  const maxNameLength = performers.length > 0 ? Math.max(...performers.map((performer) => performer.name.length)) : 1
-  const nameColumnWidth = `${maxNameLength * 10 + 20}px`
 
   const getStatusBadges = (performer: Performer) => {
     const badges = []
@@ -728,68 +748,153 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
       </div>
       <h3>演者一覧</h3>
       {performers && performers.length > 0 ? (
-        <table style={{ borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>状態</th>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left', width: nameColumnWidth }}>名前</th>
-            </tr>
-          </thead>
-          <tbody>
-            {performers.map((performer, idx) => (
-              <tr key={idx} style={{ backgroundColor: performer.exclude ? '#f0f0f0' : 'inherit' }}>
-                <td style={{ border: '1px solid #ccc', padding: '8px', cursor: 'pointer' }} onClick={() => setEditingIdx(idx)}>
-                  {editingIdx === idx ? (
-                    <select
-                      value={getStatusValue(performer)}
-                      onChange={(e) => handleStatusChange(idx, e.target.value)}
-                      onBlur={() => setEditingIdx(null)}
-                      autoFocus
-                      style={{ padding: '4px', minWidth: '100px' }}
-                    >
-                      <option value="normal">通常</option>
-                      <option value="exclude">除外</option>
-                      <option value="priority">優先</option>
-                      <option value="confirmed">確定</option>
-                    </select>
-                  ) : (
-                    getStatusBadges(performer)
-                  )}
-                </td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{performer.name}</td>
+        <div className="appearance-table-wrap performer-table-wrap">
+          <table className="appearance-table performer-table">
+            <thead>
+              <tr>
+                <th className="performer-col-status">状態</th>
+                <th className="performer-col-name">名前</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {performers.map((performer, idx) => (
+                <tr key={idx} className={performer.exclude ? 'performer-row-excluded' : ''}>
+                  <td className="performer-col-status performer-status-cell" onClick={() => setEditingIdx(idx)}>
+                    {editingIdx === idx ? (
+                      <select
+                        value={getStatusValue(performer)}
+                        onChange={(e) => handleStatusChange(idx, e.target.value)}
+                        onBlur={() => setEditingIdx(null)}
+                        autoFocus
+                        className="performer-status-select"
+                      >
+                        <option value="normal">通常</option>
+                        <option value="exclude">除外</option>
+                        <option value="priority">優先</option>
+                        <option value="confirmed">確定</option>
+                      </select>
+                    ) : (
+                      getStatusBadges(performer)
+                    )}
+                  </td>
+                  <td className="performer-col-name">{performer.name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <p>データはまだ読み込まれていません</p>
+        <p className="appearance-empty-message">データはまだ読み込まれていません</p>
       )}
     </section>
   )
 }
 
-function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegular, idols, setIdols, appearanceCheckStates, setAppearanceCheckStates }: { idolLotteryResults: { [key: number]: IdolLotteryResult }; lotteryTableData: string[]; selectedPureRegular: string; idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void }) {
+function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, lotteryHistory }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[] }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
+  const [isSubmitting] = useState(false)
+  const [registerErrorMessage, setRegisterErrorMessage] = useState('')
+  const [selectedVolFilter, setSelectedVolFilter] = useState('')
 
-  // rowIndexから対応する名前を取得
-  const getNameByRowIndex = (rowIndex: number): string => {
-    if (rowIndex === 0) {
-      return selectedPureRegular
-    } else if (rowIndex >= 1 && rowIndex <= 6) {
-      return lotteryTableData[rowIndex - 1] || ''
-    } else if (rowIndex >= 7) {
-      return lotteryTableData[6 + (rowIndex - 7)] || ''
+  const getFirstStringValue = (entry: LotteryHistory, keys: string[]) => {
+    for (const key of keys) {
+      const value = entry[key]
+      if (value === null || value === undefined) continue
+      const text = String(value).trim()
+      if (text) return text
     }
     return ''
   }
 
+  const handleAppearanceCheckChange = (rowIndex: number) => {
+    const nextChecked = !appearanceCheckStates[rowIndex]
+    setAppearanceCheckStates({
+      ...appearanceCheckStates,
+      [rowIndex]: nextChecked,
+    })
+  }
+
+  const displayRows = Array.isArray(lotteryHistory)
+    ? lotteryHistory.map((entry, rowIndex) => ({
+        rowIndex,
+        vol: getFirstStringValue(entry, ['Vol', 'vol', 'VOL']),
+        djName: getFirstStringValue(entry, ['DJ名', 'performerName', 'name', '名前', '演者名', '演者']),
+        category: getFirstStringValue(entry, ['区分', 'type', '抽選区分', '種別']),
+        idol1: getFirstStringValue(entry, ['IDチェック1', '抽選アイドルID1', '抽選アイドル1', '抽選アイドル名1', 'アイドル名1']),
+        idol2: getFirstStringValue(entry, ['IDチェック2', '抽選アイドルID2', '抽選アイドル2', '抽選アイドル名2', 'アイドル名2']),
+        idol3: getFirstStringValue(entry, ['IDチェック3', '抽選アイドルID3', '抽選アイドル3', '抽選アイドル名3', 'アイドル名3']),
+      }))
+    : []
+
+  const volFilterOptions = Array.from(
+    new Set(displayRows.map((row) => row.vol).filter((vol) => vol))
+  )
+
+  const filteredDisplayRows = selectedVolFilter
+    ? displayRows.filter((row) => row.vol === selectedVolFilter)
+    : displayRows
+
   // 出演登録ボタンクリック時の処理（確認ダイアログを表示）
   const handleRegisterClick = () => {
+    setRegisterErrorMessage('')
     setShowRegisterConfirmDialog(true)
+  }
+
+  const buildSelectedResults = () => {
+    const idolById = new Map(idols.map((idol) => [String(idol.id || ''), idol]))
+    const idolByName = new Map(idols.map((idol) => [idol.name, idol]))
+
+    const results = filteredDisplayRows
+      .filter((row) => appearanceCheckStates[row.rowIndex])
+      .map((row) => {
+        const rawValues = [row.idol1, row.idol2, row.idol3]
+          .map((value) => String(value || '').trim())
+          .filter((value) => value)
+
+        const idolIds: string[] = []
+        const idolNames: string[] = []
+
+        rawValues.forEach((value) => {
+          const idolByMatchedId = idolById.get(value)
+          if (idolByMatchedId) {
+            const matchedId = String(idolByMatchedId.id || '')
+            if (matchedId && !idolIds.includes(matchedId)) idolIds.push(matchedId)
+            if (idolByMatchedId.name && !idolNames.includes(idolByMatchedId.name)) idolNames.push(idolByMatchedId.name)
+            return
+          }
+
+          const idolByMatchedName = idolByName.get(value)
+          if (idolByMatchedName) {
+            const matchedId = String(idolByMatchedName.id || '')
+            if (matchedId && !idolIds.includes(matchedId)) idolIds.push(matchedId)
+            if (idolByMatchedName.name && !idolNames.includes(idolByMatchedName.name)) idolNames.push(idolByMatchedName.name)
+            return
+          }
+
+          if (!idolNames.includes(value)) idolNames.push(value)
+        })
+
+        return {
+          performerName: row.djName,
+          type: row.category === '補欠' ? '補欠' : '通常',
+          idolIds,
+          idolNames,
+        }
+      })
+      .filter((entry) => entry.idolIds.length > 0 || entry.idolNames.length > 0)
+
+    return results
   }
 
   // 確認後の出演登録処理
   const handleConfirmRegister = () => {
+    const results = buildSelectedResults()
+
+    if (results.length === 0) {
+      setRegisterErrorMessage('更新対象の抽選アイドルデータがありません')
+      return
+    }
+
     // 1. 抽選アイドル管理タブのチェックボックスを全てリセット
     const resetIdols = idols.map((idol) => ({
       ...idol,
@@ -798,22 +903,21 @@ function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegu
     }))
 
     // 2. チェックが入っている行のアイドルを特定
+    const checkedIdolIds = new Set<string>()
     const checkedIdolNames = new Set<string>()
-    Object.entries(appearanceCheckStates).forEach(([rowIndexStr, isChecked]) => {
-      if (isChecked) {
-        const rowIndex = Number(rowIndexStr)
-        const result = idolLotteryResults[rowIndex]
-        if (result !== 'none' && result.length > 0) {
-          result.forEach((idol) => {
-            checkedIdolNames.add(idol.name)
-          })
-        }
-      }
+    results.forEach((result) => {
+      result.idolIds.forEach((idolId) => {
+        checkedIdolIds.add(String(idolId))
+      })
+      result.idolNames.forEach((idolName) => {
+        checkedIdolNames.add(idolName)
+      })
     })
 
     // 3. チェックされたアイドルの prev を true に設定
     const updatedIdols = resetIdols.map((idol) => {
-      if (checkedIdolNames.has(idol.name)) {
+      const idolId = String(idol.id || '')
+      if ((idolId && checkedIdolIds.has(idolId)) || checkedIdolNames.has(idol.name)) {
         return { ...idol, prev: true }
       }
       return idol
@@ -822,92 +926,81 @@ function AppearancePage({ idolLotteryResults, lotteryTableData, selectedPureRegu
     setIdols(updatedIdols)
     setShowRegisterConfirmDialog(false)
   }
-
-  // useEffectでボタンにイベントリスナーを追加
-  useEffect(() => {
-    const registerBtn = document.getElementById('register-appearance')
-    if (registerBtn) {
-      registerBtn.addEventListener('click', handleRegisterClick)
-      return () => {
-        registerBtn.removeEventListener('click', handleRegisterClick)
-      }
-    }
-  }, [appearanceCheckStates, idolLotteryResults])
-
-  // rowIndexごとに行を作成
-  const allEntries = Object.entries(idolLotteryResults)
-    .map(([rowIndexStr, result]) => {
-      const rowIndex = Number(rowIndexStr)
-      const performerName = getNameByRowIndex(rowIndex)
-      
-      const idols = result === 'none' ? [] : result
-      return {
-        rowIndex,
-        performerName,
-        idols,
-      }
-    })
-    .sort((a, b) => a.rowIndex - b.rowIndex)
-
   return (
     <section className="tab-page other-tab-page">
       {showRegisterConfirmDialog && (
-        <div className="modal-overlay" onClick={() => setShowRegisterConfirmDialog(false)}>
+        <div className="modal-overlay" onClick={() => !isSubmitting && setShowRegisterConfirmDialog(false)}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>確認</h3>
             </div>
             <div className="modal-body">
-              <p>出演者と抽選アイドルを更新しますか？</p>
+              <p>抽選アイドルを更新しますか？</p>
+              {registerErrorMessage && <p style={{ color: '#eb5757' }}>{registerErrorMessage}</p>}
             </div>
             <div className="modal-footer">
-              <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)}>キャンセル</button>
-              <button className="modal-btn" onClick={handleConfirmRegister}>更新</button>
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)} disabled={isSubmitting}>キャンセル</button>
+              <button className="modal-btn" onClick={handleConfirmRegister} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '更新'}</button>
             </div>
           </div>
         </div>
       )}
       <h2>出演管理</h2>
       <div style={{ marginBottom: '16px', marginLeft: '-24px' }}>
-        <button id="register-appearance" className="lot-btn" type="button">出演登録</button>
+        <button id="register-appearance" className="lot-btn" type="button" onClick={handleRegisterClick}>出演登録</button>
       </div>
-      {allEntries.length > 0 ? (
-        <table style={{ borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>名前</th>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名1</th>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名2</th>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>抽選アイドル名3</th>
-              <th style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', width: '60px' }}>出演</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allEntries.map((entry, idx) => (
-              <tr key={idx}>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.performerName}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.idols[0]?.name || ''}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.idols[1]?.name || ''}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{entry.idols[2]?.name || ''}</td>
-                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={appearanceCheckStates[entry.rowIndex] || false}
-                    onChange={() => {
-                      setAppearanceCheckStates({
-                        ...appearanceCheckStates,
-                        [entry.rowIndex]: !appearanceCheckStates[entry.rowIndex],
-                      })
-                    }}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                </td>
+      <div className="appearance-filter-wrap">
+        <label htmlFor="appearance-vol-filter" className="appearance-filter-label">Vol絞り込み</label>
+        <select
+          id="appearance-vol-filter"
+          value={selectedVolFilter}
+          onChange={(e) => setSelectedVolFilter(e.target.value)}
+          className="appearance-filter-select"
+        >
+          <option value="">全て</option>
+          {volFilterOptions.map((vol) => (
+            <option key={vol} value={vol}>{vol}</option>
+          ))}
+        </select>
+      </div>
+      {filteredDisplayRows.length > 0 ? (
+        <div className="appearance-table-wrap">
+          <table className="appearance-table">
+            <thead>
+              <tr>
+                <th>Vol</th>
+                <th>DJ名</th>
+                <th>区分</th>
+                <th>抽選アイドル1</th>
+                <th>抽選アイドル2</th>
+                <th>抽選アイドル3</th>
+                <th className="appearance-col-check">出演</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredDisplayRows.map((row) => (
+                <tr key={row.rowIndex}>
+                  <td>{row.vol}</td>
+                  <td>{row.djName}</td>
+                  <td>{row.category}</td>
+                  <td>{row.idol1}</td>
+                  <td>{row.idol2}</td>
+                  <td>{row.idol3}</td>
+                  <td className="appearance-col-check">
+                    <input
+                      type="checkbox"
+                      checked={appearanceCheckStates[row.rowIndex] || false}
+                      onChange={() => handleAppearanceCheckChange(row.rowIndex)}
+                      className="appearance-check-input"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <p>出演データはありません</p>
+        <p className="appearance-empty-message">{displayRows.length > 0 ? '該当する出演データはありません' : '出演データはありません'}</p>
       )}
     </section>
   )
@@ -999,6 +1092,8 @@ const tabs: { key: TabKey; label: string }[] = [
 ]
 
 function App() {
+  const autoSaveInFlightRef = useRef(false)
+  const lastAutoSavedPayloadRef = useRef('')
   const [activeTab, setActiveTab] = useState<TabKey>('lottery')
   const [volCount, setVolCount] = useState(() => {
     const saved = localStorage.getItem('volCount')
@@ -1040,6 +1135,10 @@ function App() {
     const saved = localStorage.getItem('lotteryTableData')
     return saved ? JSON.parse(saved) : []
   })
+  const [performerLotteryTypes, setPerformerLotteryTypes] = useState<{ [key: string]: PerformerLotteryType }>(() => {
+    const saved = localStorage.getItem('performerLotteryTypes')
+    return saved ? JSON.parse(saved) : {}
+  })
   const [idolLotteryResults, setIdolLotteryResults] = useState<{ [key: number]: IdolLotteryResult }>(() => {
     const saved = localStorage.getItem('idolLotteryResults')
     return saved ? JSON.parse(saved) : {}
@@ -1048,6 +1147,11 @@ function App() {
     const saved = localStorage.getItem('appearanceCheckStates')
     return saved ? JSON.parse(saved) : {}
   })
+  const [backupCheckStates, setBackupCheckStates] = useState<{ [key: number]: boolean }>(() => {
+    const saved = localStorage.getItem('backupCheckStates')
+    return saved ? JSON.parse(saved) : {}
+  })
+  const [lotteryHistory, setLotteryHistory] = useState<LotteryHistory[]>([])
 
   // GAS APIからデータを取得
   useEffect(() => {
@@ -1055,6 +1159,7 @@ function App() {
       try {
         const response = await fetch(GAS_URL)
         const data = await response.json()
+        console.log(data)
 
         // Idolsのマージ処理
         if (data.idols) {
@@ -1087,6 +1192,10 @@ function App() {
             }
           })
           setPerformers(processedPerformers)
+        }
+
+        if (Array.isArray(data.lotteryHistory)) {
+          setLotteryHistory(data.lotteryHistory)
         }
 
         console.log('GAS同期完了')
@@ -1139,6 +1248,10 @@ function App() {
   }, [lotteryTableData])
 
   useEffect(() => {
+    localStorage.setItem('performerLotteryTypes', JSON.stringify(performerLotteryTypes))
+  }, [performerLotteryTypes])
+
+  useEffect(() => {
     localStorage.setItem('idolLotteryResults', JSON.stringify(idolLotteryResults))
   }, [idolLotteryResults])
 
@@ -1146,16 +1259,100 @@ function App() {
     localStorage.setItem('appearanceCheckStates', JSON.stringify(appearanceCheckStates))
   }, [appearanceCheckStates])
 
+  useEffect(() => {
+    localStorage.setItem('backupCheckStates', JSON.stringify(backupCheckStates))
+  }, [backupCheckStates])
+
+  useEffect(() => {
+    const totalRows = isSpecialEnabled ? specialPerformerCount : 10
+
+    if (totalRows <= 0) return
+
+    const getPerformerNameByRowIndex = (rowIndex: number): string => {
+      if (isSpecialEnabled) {
+        if (rowIndex === 0) return selectedPureRegular
+        return lotteryTableData[rowIndex - 1] || ''
+      }
+
+      if (rowIndex === 0) return selectedPureRegular
+      if (rowIndex >= 1 && rowIndex <= 6) return lotteryTableData[rowIndex - 1] || ''
+      return lotteryTableData[6 + (rowIndex - 7)] || ''
+    }
+
+    const builtResults: { performerName: string; type: '通常' | '補欠'; idolIds: string[] }[] = []
+
+    for (let rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+      const performerName = getPerformerNameByRowIndex(rowIndex)
+      const result = idolLotteryResults[rowIndex]
+
+      if (!performerName || result === undefined) {
+        return
+      }
+
+      const rowNumber = rowIndex + 1
+      const type: '通常' | '補欠' = isSpecialEnabled && rowNumber >= 8 && rowNumber <= 10 ? '補欠' : '通常'
+
+      builtResults.push({
+        performerName,
+        type,
+        idolIds: result === 'none' ? [] : result.map((idol) => idol.id),
+      })
+    }
+
+    if (builtResults.length === 0) return
+
+    const payload = {
+      action: 'saveLotteryResults',
+      vol: isSpecialEnabled ? specialVolText : String(volCount),
+      results: builtResults,
+    }
+    const payloadKey = JSON.stringify(payload)
+
+    if (autoSaveInFlightRef.current || lastAutoSavedPayloadRef.current === payloadKey) {
+      return
+    }
+
+    autoSaveInFlightRef.current = true
+
+    const saveToGAS = async () => {
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const res = await response.json()
+
+        if (!res.success) {
+          throw new Error(typeof res.message === 'string' ? res.message : '保存に失敗しました')
+        }
+
+        lastAutoSavedPayloadRef.current = payloadKey
+        console.log('抽選結果を自動登録しました')
+      } catch (error) {
+        console.error('抽選結果の自動登録に失敗:', error)
+      } finally {
+        autoSaveInFlightRef.current = false
+      }
+    }
+
+    void saveToGAS()
+  }, [idolLotteryResults, lotteryTableData, selectedPureRegular, isSpecialEnabled, specialPerformerCount, specialVolText, volCount])
+
   const renderPage = () => {
     switch (activeTab) {
       case 'lottery':
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} />
       case 'lotteryIdol':
         return <LotteryIdolPage idols={idols} setIdols={setIdols} />
       case 'performer':
         return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} />
       case 'appearance':
-        return <AppearancePage idolLotteryResults={idolLotteryResults} lotteryTableData={lotteryTableData} selectedPureRegular={selectedPureRegular} idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} />
+        return <AppearancePage idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} lotteryHistory={lotteryHistory} />
       case 'settings':
         return (
           <SettingsPage
@@ -1174,7 +1371,7 @@ function App() {
           />
         )
       default:
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} />
     }
   }
 
