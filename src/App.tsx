@@ -706,10 +706,10 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
 
   const getStatusBadges = (performer: Performer) => {
     const badges = []
-    if (performer.exclude) badges.push(<span key="exclude" style={{ display: 'inline-block', backgroundColor: '#555555', color: 'white', padding: '2px 6px', borderRadius: '4px', marginRight: '4px', fontSize: '12px' }}>除外</span>)
-    if (performer.priority) badges.push(<span key="priority" style={{ display: 'inline-block', backgroundColor: '#f2994a', color: 'white', padding: '2px 6px', borderRadius: '4px', marginRight: '4px', fontSize: '12px' }}>優先</span>)
-    if (performer.confirmed) badges.push(<span key="confirmed" style={{ display: 'inline-block', backgroundColor: '#eb5757', color: 'white', padding: '2px 6px', borderRadius: '4px', marginRight: '4px', fontSize: '12px' }}>確定</span>)
-    return badges.length > 0 ? badges : <span style={{ display: 'inline-block', backgroundColor: '#27ae60', color: 'white', padding: '2px 6px', borderRadius: '4px', marginRight: '4px', fontSize: '12px' }}>通常</span>
+    if (performer.exclude) badges.push(<span key="exclude" className="performer-status-badge performer-status-exclude">除外</span>)
+    if (performer.priority) badges.push(<span key="priority" className="performer-status-badge performer-status-priority">優先</span>)
+    if (performer.confirmed) badges.push(<span key="confirmed" className="performer-status-badge performer-status-confirmed">確定</span>)
+    return badges.length > 0 ? badges : <span className="performer-status-badge performer-status-normal">通常</span>
   }
 
   const getStatusValue = (performer: Performer): string => {
@@ -735,9 +735,9 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
   return (
     <section className="tab-page other-tab-page">
       <h2>演者管理</h2>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>準レギュラー設定: </h3>
-        <select value={selectedPureRegular} onChange={(e) => setSelectedPureRegular(e.target.value)}>
+      <div className="performer-regular-setting">
+        <h3>準レギュラー設定</h3>
+        <select className="appearance-filter-select" value={selectedPureRegular} onChange={(e) => setSelectedPureRegular(e.target.value)}>
           <option value="">選択してください</option>
           {pureRegularOptions.map((option) => (
             <option key={option} value={option}>
@@ -790,11 +790,13 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
   )
 }
 
-function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, lotteryHistory }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[] }) {
+function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, lotteryHistory, onRefreshLotteryHistory }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<void> }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
   const [isSubmitting] = useState(false)
   const [registerErrorMessage, setRegisterErrorMessage] = useState('')
   const [selectedVolFilter, setSelectedVolFilter] = useState('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshErrorMessage, setRefreshErrorMessage] = useState('')
 
   const getFirstStringValue = (entry: LotteryHistory, keys: string[]) => {
     for (const key of keys) {
@@ -838,6 +840,19 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
   const handleRegisterClick = () => {
     setRegisterErrorMessage('')
     setShowRegisterConfirmDialog(true)
+  }
+
+  const handleRefreshClick = async () => {
+    setRefreshErrorMessage('')
+    setIsRefreshing(true)
+    try {
+      await onRefreshLotteryHistory()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '最新情報の取得に失敗しました'
+      setRefreshErrorMessage(message)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const buildSelectedResults = () => {
@@ -946,9 +961,13 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
         </div>
       )}
       <h2>出演管理</h2>
-      <div style={{ marginBottom: '16px', marginLeft: '-24px' }}>
+      <div className="appearance-action-row">
         <button id="register-appearance" className="lot-btn" type="button" onClick={handleRegisterClick}>出演登録</button>
+        <button id="refresh-appearance" className="lot-btn" type="button" onClick={() => void handleRefreshClick()} disabled={isRefreshing}>
+          {isRefreshing ? '更新中...' : '最新情報に更新'}
+        </button>
       </div>
+      {refreshErrorMessage && <p className="appearance-error-message">{refreshErrorMessage}</p>}
       <div className="appearance-filter-wrap">
         <label htmlFor="appearance-vol-filter" className="appearance-filter-label">Vol絞り込み</label>
         <select
@@ -1009,75 +1028,84 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
 function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEnabled, specialVolText, setSpecialVolText, specialPerformerCount, setSpecialPerformerCount, volume, setVolume, isMuted, setIsMuted }: { volCount: number; setVolCount: (val: number) => void; isSpecialEnabled: boolean; setIsSpecialEnabled: (val: boolean) => void; specialVolText: string; setSpecialVolText: (val: string) => void; specialPerformerCount: number; setSpecialPerformerCount: (val: number) => void; volume: number; setVolume: (val: number) => void; isMuted: boolean; setIsMuted: (val: boolean) => void }) {
   return (
     <section className="tab-page other-tab-page">
-      <h2>通常回Vol管理</h2>
-      <h3>現在のVol数</h3>
-      <div>
-        <input
-          type="number"
-          min="0"
-          value={volCount}
-          onChange={(e) => setVolCount(Number(e.target.value))}
-        />
-        回
+      <div className="settings-group">
+        <h2>通常回Vol管理</h2>
+        <h3>現在のVol数</h3>
+        <div className="settings-input-row">
+          <input
+            className="settings-input"
+            type="number"
+            min="0"
+            value={volCount}
+            onChange={(e) => setVolCount(Number(e.target.value))}
+          />
+          回
+        </div>
       </div>
 
-      <h2>特殊回管理</h2>
-      <div className="special-enable-wrapper">
-        <input
-          id="special-enable-toggle"
-          type="checkbox"
-          checked={isSpecialEnabled}
-          onChange={(e) => setIsSpecialEnabled(e.target.checked)}
-          className="toggle-switch-input"
-        />
-        <label htmlFor="special-enable-toggle" className="toggle-switch-label" />
-        <label htmlFor="special-enable-toggle" className="special-enable-label">
-          特殊回を有効にする
-        </label>
-      </div>
-      <h3>vol表示を置き換える文字列</h3>
-      <div>
-        <input
-          type="text"
-          value={specialVolText}
-          onChange={(e) => setSpecialVolText(e.target.value)}
-        />
-      </div>
-      <h3>特殊回の出演者数</h3>
-      <div>
-        <input
-          type="number"
-          min="0"
-          value={specialPerformerCount}
-          onChange={(e) => setSpecialPerformerCount(Number(e.target.value))}
-        />
+      <div className="settings-group">
+        <h2>特殊回管理</h2>
+        <div className="special-enable-wrapper">
+          <input
+            id="special-enable-toggle"
+            type="checkbox"
+            checked={isSpecialEnabled}
+            onChange={(e) => setIsSpecialEnabled(e.target.checked)}
+            className="toggle-switch-input"
+          />
+          <label htmlFor="special-enable-toggle" className="toggle-switch-label" />
+          <label htmlFor="special-enable-toggle" className="special-enable-label">
+            特殊回を有効にする
+          </label>
+        </div>
+        <h3>vol表示を置き換える文字列</h3>
+        <div className="settings-input-row">
+          <input
+            className="settings-input"
+            type="text"
+            value={specialVolText}
+            onChange={(e) => setSpecialVolText(e.target.value)}
+          />
+        </div>
+        <h3>特殊回の出演者数</h3>
+        <div className="settings-input-row">
+          <input
+            className="settings-input"
+            type="number"
+            min="0"
+            value={specialPerformerCount}
+            onChange={(e) => setSpecialPerformerCount(Number(e.target.value))}
+          />
+        </div>
       </div>
 
-      <h2>音量調節</h2>
-      <div className="volume-control-wrapper">
-        <span className="volume-icon">🔈</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          className="volume-slider"
-        />
-        <span className="volume-icon">🔊</span>
-      </div>
-      <div className="special-enable-wrapper">
-        <input
-          id="mute-toggle"
-          type="checkbox"
-          checked={isMuted}
-          onChange={(e) => setIsMuted(e.target.checked)}
-          className="toggle-switch-input"
-        />
-        <label htmlFor="mute-toggle" className="toggle-switch-label" />
-        <label htmlFor="mute-toggle" className="special-enable-label">
-          ミュート
-        </label>
+      <div className="settings-group">
+        <h2>音量調節</h2>
+        <div className="volume-control-wrapper">
+          <span className="volume-icon">🔈</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="volume-slider"
+          />
+          <span className="volume-icon">🔊</span>
+        </div>
+        <div className="special-enable-wrapper">
+          <input
+            id="mute-toggle"
+            type="checkbox"
+            checked={isMuted}
+            onChange={(e) => setIsMuted(e.target.checked)}
+            className="toggle-switch-input"
+          />
+          <label htmlFor="mute-toggle" className="toggle-switch-label" />
+          <label htmlFor="mute-toggle" className="special-enable-label">
+            ミュート
+          </label>
+        </div>
       </div>
     </section>
   )
@@ -1152,6 +1180,21 @@ function App() {
     return saved ? JSON.parse(saved) : {}
   })
   const [lotteryHistory, setLotteryHistory] = useState<LotteryHistory[]>([])
+
+  const refreshLotteryHistory = async () => {
+    const response = await fetch(GAS_URL)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+    if (Array.isArray(data.lotteryHistory)) {
+      setLotteryHistory(data.lotteryHistory)
+    } else {
+      setLotteryHistory([])
+    }
+  }
 
   // GAS APIからデータを取得
   useEffect(() => {
@@ -1290,7 +1333,7 @@ function App() {
       }
 
       const rowNumber = rowIndex + 1
-      const type: '通常' | '補欠' = isSpecialEnabled && rowNumber >= 8 && rowNumber <= 10 ? '補欠' : '通常'
+      const type: '通常' | '補欠' = !isSpecialEnabled && rowNumber >= 8 ? '補欠' : '通常'
 
       builtResults.push({
         performerName,
@@ -1352,7 +1395,7 @@ function App() {
       case 'performer':
         return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} />
       case 'appearance':
-        return <AppearancePage idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} lotteryHistory={lotteryHistory} />
+        return <AppearancePage idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} lotteryHistory={lotteryHistory} onRefreshLotteryHistory={refreshLotteryHistory} />
       case 'settings':
         return (
           <SettingsPage

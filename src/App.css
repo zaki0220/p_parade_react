@@ -152,6 +152,25 @@
 	font-weight: 600;
 }
 
+.appearance-error-message {
+	color: #eb5757;
+	margin-top: -8px;
+	margin-bottom: 8px;
+	font-weight: 600;
+}
+
+.appearance-action-row {
+	margin-bottom: 16px;
+	margin-left: -24px;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.appearance-action-row .lot-btn {
+	min-width: 140px;
+}
+
 .idol-header-sort {
 	cursor: pointer;
 	user-select: none;
@@ -214,8 +233,113 @@
 	outline-offset: 1px;
 }
 
+.performer-status-badge {
+	display: inline-block;
+	color: #fff;
+	padding: 2px 6px;
+	border-radius: 4px;
+	margin-right: 4px;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.performer-status-exclude {
+	background-color: #555555;
+}
+
+.performer-status-priority {
+	background-color: #f2994a;
+}
+
+.performer-status-confirmed {
+	background-color: #eb5757;
+}
+
+.performer-status-normal {
+	background-color: #27ae60;
+}
+
+.performer-regular-setting {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 20px;
+}
+
+.performer-regular-setting h3 {
+	margin: 0;
+}
+
+.performer-regular-setting .appearance-filter-select {
+	min-width: 220px;
+}
+
 .other-tab-page {
 	padding: 20px;
+}
+
+.other-tab-page h2 {
+	margin: 0 0 14px;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 30px;
+	color: #333;
+}
+
+.other-tab-page h3 {
+	margin: 16px 0 10px;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 22px;
+	color: #333;
+}
+
+.other-tab-page h4 {
+	margin: 12px 0 10px;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 18px;
+	color: #333;
+}
+
+.other-tab-page .lot-btn {
+	margin-top: 0;
+}
+
+.settings-input-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.settings-group {
+	margin-bottom: 36px;
+}
+
+.settings-group:last-child {
+	margin-bottom: 0;
+}
+
+.settings-group .special-enable-wrapper {
+	margin: 8px 0 14px;
+}
+
+.settings-group .volume-control-wrapper {
+	margin: 10px 0 14px;
+}
+
+.settings-input {
+	min-width: 170px;
+	padding: 8px 12px;
+	border: 2px solid #555;
+	border-radius: 8px;
+	background-color: #f0f0f0;
+	color: #333;
+	font-weight: 600;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+}
+
+.settings-input:focus {
+	outline: 2px solid #333;
+	outline-offset: 1px;
 }
 
 .idol-bulk-actions {
@@ -300,6 +424,22 @@
 #register-appearance {
 	background-color: #3498db;
 	margin-left: 24px;
+}
+
+#refresh-appearance {
+	background-color: #27ae60;
+}
+
+#refresh-appearance:hover {
+	background-color: #229954;
+}
+
+#refresh-appearance:disabled {
+	background-color: #d0d0d0;
+	color: #666;
+	cursor: not-allowed;
+	opacity: 1;
+	transform: none;
 }
 
 #clear-lottery {
