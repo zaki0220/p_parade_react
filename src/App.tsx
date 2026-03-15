@@ -44,7 +44,7 @@ type LotteryHistory = {
   [key: string]: unknown
 }
 
-function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean }) {
+function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
   const logoPath = `${import.meta.env.BASE_URL}etc/NewP_Parade_logo.png`
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
@@ -201,6 +201,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   }
 
   const handleIdolLottery = (rowIndex: number) => {
+    if (!isIdolLotteryEffectEnabled) {
+      executeLottery(rowIndex)
+      return
+    }
+
     // 動画を表示して、動画終了後に抽選を実行
     setPendingLotteryRow(rowIndex)
     setShowVideoOverlay(true)
@@ -262,7 +267,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     // 指定IDが含まれているか確認し、50%の確率でtrueを返す
     const hasTargetId = selectedIdols.some(idol => PUCHUN_TRIGGER_ID_LIST.includes(String(idol.id)))
     console.log(selectedIdols)
-    return hasTargetId && Math.random() < 0.5
+    return isPuchunEnabled && hasTargetId && Math.random() < 0.5
   }
 
   const handleVideoEnd = () => {
@@ -700,8 +705,10 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
   )
 }
 
-function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers, setPerformers }: { selectedPureRegular: string; setSelectedPureRegular: (val: string) => void; performers: Performer[]; setPerformers: (performers: Performer[]) => void }) {
+function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers, setPerformers, onRefreshPerformers }: { selectedPureRegular: string; setSelectedPureRegular: (val: string) => void; performers: Performer[]; setPerformers: (performers: Performer[]) => void; onRefreshPerformers: () => Promise<void> }) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshErrorMessage, setRefreshErrorMessage] = useState('')
   const pureRegularOptions = ["colorfu√", "MitsubaProject", "わたげ改", "黒糖"]
 
   const getStatusBadges = (performer: Performer) => {
@@ -732,6 +739,20 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
     setEditingIdx(null)
   }
 
+  const handleRefreshClick = async () => {
+    setRefreshErrorMessage('')
+    setIsRefreshing(true)
+    setEditingIdx(null)
+    try {
+      await onRefreshPerformers()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '最新情報の取得に失敗しました'
+      setRefreshErrorMessage(message)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   return (
     <section className="tab-page other-tab-page">
       <h2>演者管理</h2>
@@ -746,6 +767,12 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
           ))}
         </select>
       </div>
+      <div className="appearance-action-row">
+        <button id="refresh-performers" className="lot-btn" type="button" onClick={() => void handleRefreshClick()} disabled={isRefreshing}>
+          {isRefreshing ? '更新中...' : '最新情報に更新'}
+        </button>
+      </div>
+      {refreshErrorMessage && <p className="appearance-error-message">{refreshErrorMessage}</p>}
       <h3>演者一覧</h3>
       {performers && performers.length > 0 ? (
         <div className="appearance-table-wrap performer-table-wrap">
@@ -1025,7 +1052,9 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
   )
 }
 
-function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEnabled, specialVolText, setSpecialVolText, specialPerformerCount, setSpecialPerformerCount, volume, setVolume, isMuted, setIsMuted }: { volCount: number; setVolCount: (val: number) => void; isSpecialEnabled: boolean; setIsSpecialEnabled: (val: boolean) => void; specialVolText: string; setSpecialVolText: (val: string) => void; specialPerformerCount: number; setSpecialPerformerCount: (val: number) => void; volume: number; setVolume: (val: number) => void; isMuted: boolean; setIsMuted: (val: boolean) => void }) {
+function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEnabled, specialVolText, setSpecialVolText, specialPerformerCount, setSpecialPerformerCount, volume, setVolume, isMuted, setIsMuted, isPuchunEnabled, setIsPuchunEnabled, isIdolLotteryEffectEnabled, setIsIdolLotteryEffectEnabled }: { volCount: number; setVolCount: (val: number) => void; isSpecialEnabled: boolean; setIsSpecialEnabled: (val: boolean) => void; specialVolText: string; setSpecialVolText: (val: string) => void; specialPerformerCount: number; setSpecialPerformerCount: (val: number) => void; volume: number; setVolume: (val: number) => void; isMuted: boolean; setIsMuted: (val: boolean) => void; isPuchunEnabled: boolean; setIsPuchunEnabled: (val: boolean) => void; isIdolLotteryEffectEnabled: boolean; setIsIdolLotteryEffectEnabled: (val: boolean) => void }) {
+  const [isDragging, setIsDragging] = useState(false)
+
   return (
     <section className="tab-page other-tab-page">
       <div className="settings-group">
@@ -1083,14 +1112,28 @@ function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEna
         <h2>音量調節</h2>
         <div className="volume-control-wrapper">
           <span className="volume-icon">🔈</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="volume-slider"
-          />
+          <div className="volume-slider-wrapper">
+            {isDragging && (
+              <div
+                className="volume-tooltip"
+                style={{ left: `calc(${volume}% - ${volume * 0.18 - 9}px)` }}
+              >
+                {volume}%
+              </div>
+            )}
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              className="volume-slider"
+              style={{ background: `linear-gradient(to right, #27ae60 ${volume}%, #ddd ${volume}%)` }}
+              onPointerDown={() => setIsDragging(true)}
+              onPointerUp={() => setIsDragging(false)}
+              onPointerCancel={() => setIsDragging(false)}
+            />
+          </div>
           <span className="volume-icon">🔊</span>
         </div>
         <div className="special-enable-wrapper">
@@ -1107,6 +1150,36 @@ function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEna
           </label>
         </div>
       </div>
+
+      <div className="settings-group">
+        <h2>演出設定</h2>
+        <div className="special-enable-wrapper">
+          <input
+            id="idol-lottery-effect-toggle"
+            type="checkbox"
+            checked={isIdolLotteryEffectEnabled}
+            onChange={(e) => setIsIdolLotteryEffectEnabled(e.target.checked)}
+            className="toggle-switch-input"
+          />
+          <label htmlFor="idol-lottery-effect-toggle" className="toggle-switch-label" />
+          <label htmlFor="idol-lottery-effect-toggle" className="special-enable-label">
+            アイドル抽選演出を有効にする
+          </label>
+        </div>
+        <div className="special-enable-wrapper">
+          <input
+            id="puchun-enable-toggle"
+            type="checkbox"
+            checked={isPuchunEnabled}
+            onChange={(e) => setIsPuchunEnabled(e.target.checked)}
+            className="toggle-switch-input"
+          />
+          <label htmlFor="puchun-enable-toggle" className="toggle-switch-label" />
+          <label htmlFor="puchun-enable-toggle" className="special-enable-label">
+            プチュン演出を有効にする
+          </label>
+        </div>
+      </div>
     </section>
   )
 }
@@ -1120,6 +1193,42 @@ const tabs: { key: TabKey; label: string }[] = [
 ]
 
 function App() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMenuClosing, setIsMenuClosing] = useState(false)
+  const menuCloseStartTimerRef = useRef<number | null>(null)
+  const menuCloseEndTimerRef = useRef<number | null>(null)
+  const clearMenuTimers = () => {
+    if (menuCloseStartTimerRef.current !== null) {
+      window.clearTimeout(menuCloseStartTimerRef.current)
+      menuCloseStartTimerRef.current = null
+    }
+    if (menuCloseEndTimerRef.current !== null) {
+      window.clearTimeout(menuCloseEndTimerRef.current)
+      menuCloseEndTimerRef.current = null
+    }
+  }
+  const openMenu = () => {
+    clearMenuTimers()
+    setIsMenuClosing(false)
+    setIsMenuOpen(true)
+  }
+  const closeMenu = () => {
+    clearMenuTimers()
+    setIsMenuClosing(true)
+    menuCloseStartTimerRef.current = window.setTimeout(() => {
+      setIsMenuOpen(false)
+      menuCloseStartTimerRef.current = null
+    }, 350)
+    menuCloseEndTimerRef.current = window.setTimeout(() => {
+      setIsMenuClosing(false)
+      menuCloseEndTimerRef.current = null
+    }, 600)
+  }
+  useEffect(() => {
+    return () => {
+      clearMenuTimers()
+    }
+  }, [])
   const autoSaveInFlightRef = useRef(false)
   const lastAutoSavedPayloadRef = useRef('')
   const [activeTab, setActiveTab] = useState<TabKey>('lottery')
@@ -1146,6 +1255,14 @@ function App() {
   const [isMuted, setIsMuted] = useState(() => {
     const saved = localStorage.getItem('isMuted')
     return saved ? JSON.parse(saved) : false
+  })
+  const [isPuchunEnabled, setIsPuchunEnabled] = useState(() => {
+    const saved = localStorage.getItem('isPuchunEnabled')
+    return saved ? JSON.parse(saved) : true
+  })
+  const [isIdolLotteryEffectEnabled, setIsIdolLotteryEffectEnabled] = useState(() => {
+    const saved = localStorage.getItem('isIdolLotteryEffectEnabled')
+    return saved ? JSON.parse(saved) : true
   })
   const [selectedPureRegular, setSelectedPureRegular] = useState(() => {
     const saved = localStorage.getItem('selectedPureRegular')
@@ -1181,6 +1298,43 @@ function App() {
   })
   const [lotteryHistory, setLotteryHistory] = useState<LotteryHistory[]>([])
 
+  const buildProcessedPerformers = (performerData: Performer[]) => {
+    return performerData.map((p: Performer) => {
+      const loseCount = Number(p.loseCount) || 0
+      const lastWin = Number(p.lastWin) || 0
+      const lastBackup = Number(p.lastBackup) || 0
+      const lastJoin = Number(p.lastJoin) || 0
+
+      return {
+        exclude: p.exclude === true || p.exclude === 'TRUE',
+        priority: loseCount >= PRIORITY_LOSE_THRESHOLD || lastBackup > lastJoin,
+        confirmed: lastWin > lastJoin,
+        name: p.name || '',
+        twitterId: p.twitterId || '',
+        joinCount: p.joinCount || 0,
+        loseCount: loseCount,
+        lastWin: lastWin,
+        lastBackup: lastBackup,
+        lastJoin: lastJoin,
+      }
+    })
+  }
+
+  const refreshPerformers = async () => {
+    const response = await fetch(GAS_URL)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+    if (Array.isArray(data.performers)) {
+      setPerformers(buildProcessedPerformers(data.performers))
+    } else {
+      setPerformers([])
+    }
+  }
+
   const refreshLotteryHistory = async () => {
     const response = await fetch(GAS_URL)
 
@@ -1215,26 +1369,7 @@ function App() {
 
         // Performersのマージ処理と計算
         if (data.performers) {
-          const processedPerformers = data.performers.map((p: Performer) => {
-            const loseCount = Number(p.loseCount) || 0
-            const lastWin = Number(p.lastWin) || 0
-            const lastBackup = Number(p.lastBackup) || 0
-            const lastJoin = Number(p.lastJoin) || 0
-
-            return {
-              exclude: p.exclude === true || p.exclude === 'TRUE',
-              priority: loseCount >= PRIORITY_LOSE_THRESHOLD || lastBackup > lastJoin,
-              confirmed: lastWin > lastJoin,
-              name: p.name || '',
-              twitterId: p.twitterId || '',
-              joinCount: p.joinCount || 0,
-              loseCount: loseCount,
-              lastWin: lastWin,
-              lastBackup: lastBackup,
-              lastJoin: lastJoin,
-            }
-          })
-          setPerformers(processedPerformers)
+          setPerformers(buildProcessedPerformers(data.performers))
         }
 
         if (Array.isArray(data.lotteryHistory)) {
@@ -1273,6 +1408,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem('isMuted', JSON.stringify(isMuted))
   }, [isMuted])
+
+  useEffect(() => {
+    localStorage.setItem('isPuchunEnabled', JSON.stringify(isPuchunEnabled))
+  }, [isPuchunEnabled])
+
+  useEffect(() => {
+    localStorage.setItem('isIdolLotteryEffectEnabled', JSON.stringify(isIdolLotteryEffectEnabled))
+  }, [isIdolLotteryEffectEnabled])
 
   useEffect(() => {
     localStorage.setItem('selectedPureRegular', selectedPureRegular)
@@ -1389,11 +1532,11 @@ function App() {
   const renderPage = () => {
     switch (activeTab) {
       case 'lottery':
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
       case 'lotteryIdol':
         return <LotteryIdolPage idols={idols} setIdols={setIdols} />
       case 'performer':
-        return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} />
+        return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} onRefreshPerformers={refreshPerformers} />
       case 'appearance':
         return <AppearancePage idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} lotteryHistory={lotteryHistory} onRefreshLotteryHistory={refreshLotteryHistory} />
       case 'settings':
@@ -1411,28 +1554,87 @@ function App() {
             setVolume={setVolume}
             isMuted={isMuted}
             setIsMuted={setIsMuted}
+            isPuchunEnabled={isPuchunEnabled}
+            setIsPuchunEnabled={setIsPuchunEnabled}
+            isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled}
+            setIsIdolLotteryEffectEnabled={setIsIdolLotteryEffectEnabled}
           />
         )
       default:
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
     }
   }
 
   return (
     <main id="tab-view" className={activeTab === 'lottery' ? 'lottery-active' : ''}>
-      <nav className="tabs" aria-label="メインタブ">
-        {tabs.map((tab) => (
+      {!isMenuOpen && !isMenuClosing && (
+        <button
+          className="hamburger-btn"
+          type="button"
+          aria-label="メニューを開く"
+          aria-expanded={isMenuOpen}
+          onClick={openMenu}
+        >
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+        </button>
+      )}
+
+      {(isMenuOpen || isMenuClosing) && (
+        <div className="drawer-overlay" onClick={closeMenu} />
+      )}
+
+      <nav
+        className={`drawer-nav${isMenuOpen ? ' drawer-nav-open' : ''}${isMenuClosing ? ' drawer-nav-closing' : ''}`}
+        aria-label="メインタブ"
+      >
+        <div className="drawer-header">
+          <span className="drawer-title">メニュー</span>
           <button
-            key={tab.key}
+            className="drawer-close-btn"
             type="button"
-            className={activeTab === tab.key ? 'tab active' : 'tab'}
-            aria-pressed={activeTab === tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            aria-label="メニューを閉じる"
+            onClick={closeMenu}
           >
-            {tab.label}
+            ✕
           </button>
-        ))}
+        </div>
+        <div className="drawer-tabs-body">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={activeTab === tab.key ? 'drawer-tab drawer-tab-active' : 'drawer-tab'}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+          <div className="drawer-volume-section">
+            <div className="drawer-volume-row">
+              <span className="drawer-volume-icon">{isMuted ? '🔇' : volume === 0 ? '🔇' : volume <= 33 ? '🔈' : volume <= 66 ? '🔉' : '🔊'}</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                className="drawer-volume-slider"
+                style={{ background: `linear-gradient(to right, #27ae60 ${volume}%, rgba(0,0,0,0.15) ${volume}%)` }}
+              />
+            </div>
+            <button
+              type="button"
+              className={`drawer-mute-btn${isMuted ? ' drawer-mute-active' : ''}`}
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? 'ミュート中' : 'ミュート'}
+            </button>
+          </div>
+        </div>
       </nav>
+
       <div className="tab-content active">{renderPage()}</div>
     </main>
   )
