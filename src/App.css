@@ -80,7 +80,7 @@
 	flex-direction: column;
 	padding: 0;
 	overflow: hidden;
-	transform: translateX(-220px);
+	transform: translateX(calc(-100% - 24px));
 	opacity: 1;
 	pointer-events: none;
 	transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -93,7 +93,7 @@
 }
 
 .drawer-nav.drawer-nav-closing {
-	transform: translateX(-220px);
+	transform: translateX(calc(-100% - 24px));
 	opacity: 1;
 	pointer-events: none;
 	transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.35s;
