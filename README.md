@@ -1,73 +1,111 @@
-# React + TypeScript + Vite
+# P P@rade!!!!!!! 抽選管理アプリ
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+P Parade向けの、出演者抽選と抽選アイドル管理を行うWebアプリです。  
+抽選・出演・演者・設定をタブで切り替えて操作します。
 
-Currently, two official plugins are available:
+## アプリ概要
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 抽選結果（出演者・アイドル）を画面上で管理します。
+- 抽選対象アイドルの状態（前回抽選・抽選済み）を一元管理できます。
+- 演者の状態（通常・除外・優先・確定）を一覧で編集できます。
+- 出演履歴を参照し、選択した行から抽選アイドル状態を更新できます。
+- 各種設定（Vol表示、特殊回、音量、演出）を変更できます。
 
-## React Compiler
+## タブごとの機能と操作方法
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 1. 抽選タブ
 
-## Expanding the ESLint configuration
+出演者抽選と、出演者ごとのアイドル抽選を行うタブです。
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+#### 主な機能
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 確定当選：確定状態の演者を空き枠へ追加
+- 優先抽選：優先状態の演者を1名追加
+- 通常抽選：除外以外の演者からランダムで1名追加
+- アイドル抽選：各行ごとに最大3名のアイドルを抽選
+- 結果リセット：抽選結果・関連チェック状態を初期化
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+#### 操作の流れ
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. 必要に応じて「演者管理」で状態を設定する
+2. 「確定当選」「優先抽選」「通常抽選」で出演者枠を埋める
+3. 各行の「アイドル抽選」を押して抽選を実行する
+4. 必要なら「結果リセット」で再抽選する
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+#### 補足
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- 通常回では「補欠枠」が表示されます。
+- 特殊回が有効な場合は、設定した出演者数で行が構成されます。
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 2. 抽選アイドル管理タブ
+
+抽選対象アイドル一覧の状態管理を行うタブです。
+
+#### 主な機能
+
+- フィルター：前回抽選／抽選済み／ブランドで絞り込み
+- 並び替え：前回抽選・抽選済み・名前・ブランド・当選回数
+- 個別チェック：前回抽選、抽選済みのON/OFF
+- 一括操作：全チェック解除、ID順リセット
+
+#### 操作の流れ
+
+1. 必要な条件で絞り込みを行う
+2. 各行のチェックボックスで状態を更新する
+3. 並び替えで確認しやすい順序に調整する
+4. 必要なら一括操作で状態や並びを戻す
+
+## 3. 演者管理タブ
+
+出演候補の演者状態を編集するタブです。
+
+#### 主な機能
+
+- 準レギュラー設定
+- 演者の状態変更（通常／除外／優先／確定）
+- 最新情報への更新
+
+#### 操作の流れ
+
+1. 準レギュラーを選択する
+2. 演者一覧の「状態」をクリックして区分を変更する
+3. 必要に応じて「最新情報に更新」を実行する
+
+## 4. 出演管理タブ
+
+出演履歴を確認し、抽選アイドル状態へ反映するタブです。
+
+#### 主な機能
+
+- Volでの絞り込み
+- 履歴行ごとの出演チェック
+- 出演登録（選択行を元に抽選アイドル状態を更新）
+- 最新情報への更新
+
+#### 操作の流れ
+
+1. Vol絞り込みで対象範囲を選ぶ
+2. 反映したい行の「出演」にチェックを入れる
+3. 「出演登録」を押して更新を確定する
+4. 必要なら「最新情報に更新」で履歴を再取得する
+
+## 5. 設定タブ
+
+表示・演出・音量などの動作設定を行うタブです。
+
+#### 主な機能
+
+- 通常回Vol数の設定
+- 特殊回の有効化、表示文字列、出演者数の設定
+- 音量スライダー、ミュート切替
+- 抽選演出の有効／無効（アイドル抽選演出、プチュン演出）
+
+#### 操作の流れ
+
+1. 必要な項目を入力・切り替える
+2. 値は画面操作時点で反映される
+
+## データの扱い
+
+- 画面設定や抽選結果の一部はブラウザ内に保存されます。
+- 取得データの更新は各タブの「最新情報に更新」から行います。

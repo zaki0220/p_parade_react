@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import logoImage from './assets/etc/NewP_Parade_logo.png'
+import deresuteVideo from './assets/movie/deresute.webm'
+import puchunVideo from './assets/movie/puchun.mp4'
+import touchVideo from './assets/movie/touch.mp4'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhZ8PUsciHHMgff651G6tjlMjeZRfoo-yeIaq0e3jCdaZ_WSA52e2xcbUJqR50VXe6/exec'
@@ -45,7 +49,6 @@ type LotteryHistory = {
 }
 
 function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
-  const logoPath = `${import.meta.env.BASE_URL}etc/NewP_Parade_logo.png`
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
   const [showNoRegularDialog, setShowNoRegularDialog] = useState(false)
@@ -394,7 +397,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             autoPlay
             onEnded={handleVideoEnd}
             muted={isMuted}
-            src={`${import.meta.env.BASE_URL}movie/deresute.webm`}
+            src={deresuteVideo}
           />
         </div>
       )}
@@ -406,7 +409,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             autoPlay
             onEnded={handlePuchunVideoEnd}
             muted={isMuted}
-            src={`${import.meta.env.BASE_URL}movie/puchun.mp4`}
+            src={puchunVideo}
           />
         </div>
       )}
@@ -418,7 +421,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             autoPlay
             loop
             muted={isMuted}
-            src={`${import.meta.env.BASE_URL}movie/touch.mp4`}
+            src={touchVideo}
           />
         </div>
       )}
@@ -485,7 +488,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       )}
       <div className="lottery-top-section">
         <div className="image-block">
-          <img className="logo-img" src={logoPath} alt="P Parade ロゴ" />
+          <img className="logo-img" src={logoImage} alt="P Parade ロゴ" />
         </div>
         <div id="vol-text">
           {isSpecialEnabled ? (
@@ -819,6 +822,7 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
 
 function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, lotteryHistory, onRefreshLotteryHistory }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<void> }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
+  const [isRegisterCompleted, setIsRegisterCompleted] = useState(false)
   const [isSubmitting] = useState(false)
   const [registerErrorMessage, setRegisterErrorMessage] = useState('')
   const [selectedVolFilter, setSelectedVolFilter] = useState('')
@@ -859,6 +863,20 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     new Set(displayRows.map((row) => row.vol).filter((vol) => vol))
   )
 
+  useEffect(() => {
+    if (volFilterOptions.length === 0) {
+      if (selectedVolFilter !== '') {
+        setSelectedVolFilter('')
+      }
+      return
+    }
+
+    const latestVol = volFilterOptions[volFilterOptions.length - 1]
+    if (!selectedVolFilter || !volFilterOptions.includes(selectedVolFilter)) {
+      setSelectedVolFilter(latestVol)
+    }
+  }, [volFilterOptions, selectedVolFilter])
+
   const filteredDisplayRows = selectedVolFilter
     ? displayRows.filter((row) => row.vol === selectedVolFilter)
     : displayRows
@@ -866,6 +884,7 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
   // 出演登録ボタンクリック時の処理（確認ダイアログを表示）
   const handleRegisterClick = () => {
     setRegisterErrorMessage('')
+    setIsRegisterCompleted(false)
     setShowRegisterConfirmDialog(true)
   }
 
@@ -966,7 +985,8 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     })
 
     setIdols(updatedIdols)
-    setShowRegisterConfirmDialog(false)
+    setRegisterErrorMessage('')
+    setIsRegisterCompleted(true)
   }
   return (
     <section className="tab-page other-tab-page">
@@ -977,12 +997,26 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
               <h3>確認</h3>
             </div>
             <div className="modal-body">
-              <p>抽選アイドルを更新しますか？</p>
+              <p>{isRegisterCompleted ? '抽選アイドルを更新しました' : '抽選アイドルを更新しますか？'}</p>
               {registerErrorMessage && <p style={{ color: '#eb5757' }}>{registerErrorMessage}</p>}
             </div>
-            <div className="modal-footer">
-              <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)} disabled={isSubmitting}>キャンセル</button>
-              <button className="modal-btn" onClick={handleConfirmRegister} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '更新'}</button>
+            <div className={isRegisterCompleted ? 'modal-footer modal-footer-center' : 'modal-footer'}>
+              {isRegisterCompleted ? (
+                <button
+                  className="modal-btn modal-btn-ok"
+                  onClick={() => {
+                    setShowRegisterConfirmDialog(false)
+                    setIsRegisterCompleted(false)
+                  }}
+                >
+                  OK
+                </button>
+              ) : (
+                <>
+                  <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)} disabled={isSubmitting}>キャンセル</button>
+                  <button className="modal-btn" onClick={handleConfirmRegister} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '更新'}</button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1231,6 +1265,7 @@ function App() {
   }, [])
   const autoSaveInFlightRef = useRef(false)
   const lastAutoSavedPayloadRef = useRef('')
+  const autoSaveFirstEvaluationDoneRef = useRef(false)
   const [activeTab, setActiveTab] = useState<TabKey>('lottery')
   const [volCount, setVolCount] = useState(() => {
     const saved = localStorage.getItem('volCount')
@@ -1450,6 +1485,11 @@ function App() {
   }, [backupCheckStates])
 
   useEffect(() => {
+    const isFirstEvaluation = !autoSaveFirstEvaluationDoneRef.current
+    if (!autoSaveFirstEvaluationDoneRef.current) {
+      autoSaveFirstEvaluationDoneRef.current = true
+    }
+
     const totalRows = isSpecialEnabled ? specialPerformerCount : 10
 
     if (totalRows <= 0) return
@@ -1493,6 +1533,11 @@ function App() {
       results: builtResults,
     }
     const payloadKey = JSON.stringify(payload)
+
+    if (isFirstEvaluation) {
+      lastAutoSavedPayloadRef.current = payloadKey
+      return
+    }
 
     if (autoSaveInFlightRef.current || lastAutoSavedPayloadRef.current === payloadKey) {
       return
