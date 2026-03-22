@@ -1231,6 +1231,7 @@ function App() {
   }, [])
   const autoSaveInFlightRef = useRef(false)
   const lastAutoSavedPayloadRef = useRef('')
+  const autoSaveFirstEvaluationDoneRef = useRef(false)
   const [activeTab, setActiveTab] = useState<TabKey>('lottery')
   const [volCount, setVolCount] = useState(() => {
     const saved = localStorage.getItem('volCount')
@@ -1450,6 +1451,11 @@ function App() {
   }, [backupCheckStates])
 
   useEffect(() => {
+    const isFirstEvaluation = !autoSaveFirstEvaluationDoneRef.current
+    if (!autoSaveFirstEvaluationDoneRef.current) {
+      autoSaveFirstEvaluationDoneRef.current = true
+    }
+
     const totalRows = isSpecialEnabled ? specialPerformerCount : 10
 
     if (totalRows <= 0) return
@@ -1493,6 +1499,11 @@ function App() {
       results: builtResults,
     }
     const payloadKey = JSON.stringify(payload)
+
+    if (isFirstEvaluation) {
+      lastAutoSavedPayloadRef.current = payloadKey
+      return
+    }
 
     if (autoSaveInFlightRef.current || lastAutoSavedPayloadRef.current === payloadKey) {
       return
