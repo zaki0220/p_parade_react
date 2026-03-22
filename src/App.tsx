@@ -819,6 +819,7 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
 
 function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, lotteryHistory, onRefreshLotteryHistory }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<void> }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
+  const [isRegisterCompleted, setIsRegisterCompleted] = useState(false)
   const [isSubmitting] = useState(false)
   const [registerErrorMessage, setRegisterErrorMessage] = useState('')
   const [selectedVolFilter, setSelectedVolFilter] = useState('')
@@ -859,6 +860,20 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     new Set(displayRows.map((row) => row.vol).filter((vol) => vol))
   )
 
+  useEffect(() => {
+    if (volFilterOptions.length === 0) {
+      if (selectedVolFilter !== '') {
+        setSelectedVolFilter('')
+      }
+      return
+    }
+
+    const latestVol = volFilterOptions[volFilterOptions.length - 1]
+    if (!selectedVolFilter || !volFilterOptions.includes(selectedVolFilter)) {
+      setSelectedVolFilter(latestVol)
+    }
+  }, [volFilterOptions, selectedVolFilter])
+
   const filteredDisplayRows = selectedVolFilter
     ? displayRows.filter((row) => row.vol === selectedVolFilter)
     : displayRows
@@ -866,6 +881,7 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
   // 出演登録ボタンクリック時の処理（確認ダイアログを表示）
   const handleRegisterClick = () => {
     setRegisterErrorMessage('')
+    setIsRegisterCompleted(false)
     setShowRegisterConfirmDialog(true)
   }
 
@@ -966,7 +982,8 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     })
 
     setIdols(updatedIdols)
-    setShowRegisterConfirmDialog(false)
+    setRegisterErrorMessage('')
+    setIsRegisterCompleted(true)
   }
   return (
     <section className="tab-page other-tab-page">
@@ -977,12 +994,26 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
               <h3>確認</h3>
             </div>
             <div className="modal-body">
-              <p>抽選アイドルを更新しますか？</p>
+              <p>{isRegisterCompleted ? '抽選アイドルを更新しました' : '抽選アイドルを更新しますか？'}</p>
               {registerErrorMessage && <p style={{ color: '#eb5757' }}>{registerErrorMessage}</p>}
             </div>
-            <div className="modal-footer">
-              <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)} disabled={isSubmitting}>キャンセル</button>
-              <button className="modal-btn" onClick={handleConfirmRegister} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '更新'}</button>
+            <div className={isRegisterCompleted ? 'modal-footer modal-footer-center' : 'modal-footer'}>
+              {isRegisterCompleted ? (
+                <button
+                  className="modal-btn modal-btn-ok"
+                  onClick={() => {
+                    setShowRegisterConfirmDialog(false)
+                    setIsRegisterCompleted(false)
+                  }}
+                >
+                  OK
+                </button>
+              ) : (
+                <>
+                  <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)} disabled={isSubmitting}>キャンセル</button>
+                  <button className="modal-btn" onClick={handleConfirmRegister} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '更新'}</button>
+                </>
+              )}
             </div>
           </div>
         </div>

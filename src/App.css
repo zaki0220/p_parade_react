@@ -1007,6 +1007,12 @@
 	border-top: 1px solid #eee;
 }
 
+.modal-footer-center {
+	text-align: center;
+	display: flex;
+	justify-content: center;
+}
+
 .modal-btn {
 	background-color: #51cf66;
 	color: white;
@@ -1017,6 +1023,12 @@
 	font-weight: 600;
 	font-size: 14px;
 	transition: all 0.2s;
+}
+
+.modal-btn-ok {
+	min-width: 112px;
+	padding-left: 32px;
+	padding-right: 32px;
 }
 
 .modal-btn:hover {
