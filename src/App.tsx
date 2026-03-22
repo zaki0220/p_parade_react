@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import logoImage from './assets/etc/NewP_Parade_logo.png'
+import deresuteVideo from './assets/movie/deresute.webm'
+import puchunVideo from './assets/movie/puchun.mp4'
+import touchVideo from './assets/movie/touch.mp4'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhZ8PUsciHHMgff651G6tjlMjeZRfoo-yeIaq0e3jCdaZ_WSA52e2xcbUJqR50VXe6/exec'
@@ -45,7 +49,6 @@ type LotteryHistory = {
 }
 
 function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
-  const logoPath = `${import.meta.env.BASE_URL}etc/NewP_Parade_logo.png`
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
   const [showNoRegularDialog, setShowNoRegularDialog] = useState(false)
@@ -394,7 +397,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             autoPlay
             onEnded={handleVideoEnd}
             muted={isMuted}
-            src={`${import.meta.env.BASE_URL}movie/deresute.webm`}
+            src={deresuteVideo}
           />
         </div>
       )}
@@ -406,7 +409,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             autoPlay
             onEnded={handlePuchunVideoEnd}
             muted={isMuted}
-            src={`${import.meta.env.BASE_URL}movie/puchun.mp4`}
+            src={puchunVideo}
           />
         </div>
       )}
@@ -418,7 +421,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             autoPlay
             loop
             muted={isMuted}
-            src={`${import.meta.env.BASE_URL}movie/touch.mp4`}
+            src={touchVideo}
           />
         </div>
       )}
@@ -485,7 +488,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       )}
       <div className="lottery-top-section">
         <div className="image-block">
-          <img className="logo-img" src={logoPath} alt="P Parade ロゴ" />
+          <img className="logo-img" src={logoImage} alt="P Parade ロゴ" />
         </div>
         <div id="vol-text">
           {isSpecialEnabled ? (
