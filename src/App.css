@@ -282,20 +282,148 @@
 	padding: 8px 12px;
 	border: 2px solid #555;
 	border-radius: 8px;
-	background-color: #f0f0f0;
+	background-color: #fff9e1;
 	color: #333;
 	font-weight: 600;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
 	cursor: pointer;
-	transition: all 0.2s;
+	transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .appearance-filter-select:hover {
-	background-color: #e0e0ff;
+	background-color: #fff3c7;
+	border-color: #333;
 }
 
 .appearance-filter-select:focus {
+	background-color: #fff;
+	border-color: #555;
+	box-shadow: none;
+	outline: none;
+}
+
+.appearance-filter-select:active {
+	background-color: #fff;
+}
+
+.custom-select {
+	position: relative;
+	display: inline-block;
+}
+
+.custom-select .appearance-filter-select,
+.custom-select .performer-status-select {
+	width: 100%;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	text-align: left;
+}
+
+.custom-select-texts {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	min-width: 0;
+}
+
+.custom-select-description {
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.15;
+	color: #333;
+	white-space: nowrap;
+}
+
+.custom-select-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.custom-select-label-sub {
+	font-size: 12px;
+	line-height: 1.15;
+	color: #555;
+}
+
+.custom-select-has-description {
+	min-height: 44px;
+}
+
+.custom-select-chevron {
+	font-size: 12px;
+	line-height: 1;
+	color: #555;
+	transition: transform 0.2s ease;
+	flex-shrink: 0;
+}
+
+.custom-select-open .custom-select-chevron {
+	transform: rotate(180deg);
+}
+
+.custom-select-menu {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	width: 100%;
+	box-sizing: border-box;
+	margin-top: 0;
+	padding: 6px;
+	margin: 0;
+	list-style: none;
+	background-color: #fff9e1;
+	border: 2px solid #555;
+	border-radius: 10px;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+	z-index: 1300;
+	max-height: 260px;
+	overflow-y: auto;
+	transform-origin: top center;
+	animation: customSelectGrowDown 0.14s ease-out;
+}
+
+@keyframes customSelectGrowDown {
+	from {
+		opacity: 0;
+		transform: translateY(-2px) scaleY(0.94);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scaleY(1);
+	}
+}
+
+.custom-select-option-btn {
+	width: 100%;
+	padding: 8px 10px;
+	border: none;
+	border-radius: 6px;
+	background-color: transparent;
+	color: #333;
+	font-weight: 600;
+	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.custom-select-option-btn:hover {
+	background-color: #ffe39a;
+}
+
+.custom-select-option-btn:focus-visible {
 	outline: 2px solid #333;
 	outline-offset: 1px;
+}
+
+.custom-select-option-selected {
+	background-color: #FFDD7B;
+	color: #222;
 }
 
 .appearance-table-wrap {
@@ -435,15 +563,33 @@
 	padding: 6px 10px;
 	border: 2px solid #555;
 	border-radius: 8px;
-	background-color: #f0f0f0;
+	background-color: #fff9e1;
 	color: #333;
 	font-weight: 600;
 	font-family: 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	cursor: pointer;
+	transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.performer-status-select:hover {
+	background-color: #fff3c7;
+	border-color: #333;
 }
 
 .performer-status-select:focus {
-	outline: 2px solid #333;
-	outline-offset: 1px;
+	background-color: #fff;
+	border-color: #555;
+	box-shadow: none;
+	outline: none;
+}
+
+.performer-status-menu {
+	min-width: 132px;
+}
+
+.idol-brand-menu {
+	max-height: none;
+	overflow-y: visible;
 }
 
 .performer-status-badge {
@@ -742,12 +888,21 @@
 	font-size: 35px;
 	font-weight: lighter;
 	border-collapse: collapse;
-	width: 75%;
+	width: 100%;
 	table-layout: fixed;
-	margin: 0 0 0 12px;
+	margin: 0;
 	background-color: #ffffff;
-	box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.lottery-table-wrap {
+	width: 75%;
+	margin-left: 12px;
 	margin-top: 6px;
+	overflow: hidden;
+	border: 2px solid #555;
+	border-radius: 10px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+	background-color: #fff;
 }
 
 #lottery-container {
