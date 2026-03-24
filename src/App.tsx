@@ -48,6 +48,142 @@ type LotteryHistory = {
   [key: string]: unknown
 }
 
+type SelectOption = {
+  value: string
+  label: string
+}
+
+function UnifiedSelect({ value, options, onChange, triggerClassName, menuClassName, placeholder = '', description, autoFocus = false, disabled = false, onClose }: { value: string; options: SelectOption[]; onChange: (value: string) => void; triggerClassName: string; menuClassName?: string; placeholder?: string; description?: string; autoFocus?: boolean; disabled?: boolean; onClose?: () => void }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const listboxIdRef = useRef(`custom-select-${Math.random().toString(36).slice(2)}`)
+  const selectIdRef = useRef(`custom-select-instance-${Math.random().toString(36).slice(2)}`)
+
+  const selectedOption = options.find((option) => option.value === value)
+
+  const closeMenu = () => {
+    setIsOpen(false)
+    if (onClose) onClose()
+  }
+
+  const openMenu = () => {
+    setIsOpen(true)
+    window.dispatchEvent(new CustomEvent('unified-select-open', { detail: { id: selectIdRef.current } }))
+  }
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handlePointerDownOutside = (event: MouseEvent | TouchEvent) => {
+      if (!containerRef.current) return
+      const target = event.target as Node | null
+      if (target && !containerRef.current.contains(target)) {
+        closeMenu()
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMenu()
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDownOutside)
+    document.addEventListener('touchstart', handlePointerDownOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDownOutside)
+      document.removeEventListener('touchstart', handlePointerDownOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    const handleOtherSelectOpen = (event: Event) => {
+      const customEvent = event as CustomEvent<{ id?: string }>
+      const openedSelectId = customEvent.detail?.id
+      if (!openedSelectId || openedSelectId === selectIdRef.current) return
+      if (isOpen) {
+        closeMenu()
+      }
+    }
+
+    window.addEventListener('unified-select-open', handleOtherSelectOpen as EventListener)
+    return () => {
+      window.removeEventListener('unified-select-open', handleOtherSelectOpen as EventListener)
+    }
+  }, [isOpen])
+
+  const handleToggle = () => {
+    if (disabled) return
+    if (isOpen) {
+      closeMenu()
+      return
+    }
+    openMenu()
+  }
+
+  const handleSelect = (nextValue: string) => {
+    onChange(nextValue)
+    closeMenu()
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="custom-select"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        className={`${triggerClassName}${description ? ' custom-select-has-description' : ''}${isOpen ? ' custom-select-open' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={listboxIdRef.current}
+        onClick={handleToggle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+            e.preventDefault()
+            openMenu()
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            closeMenu()
+          }
+        }}
+        autoFocus={autoFocus}
+        disabled={disabled}
+      >
+        <span className="custom-select-texts">
+          {description && <span className="custom-select-description">{description}</span>}
+          <span className={`custom-select-label${description ? ' custom-select-label-sub' : ''}`}>{selectedOption ? selectedOption.label : placeholder}</span>
+        </span>
+        <span className="custom-select-chevron" aria-hidden="true">▾</span>
+      </button>
+      {isOpen && (
+        <ul id={listboxIdRef.current} role="listbox" className={`custom-select-menu${menuClassName ? ` ${menuClassName}` : ''}`}>
+          {options.map((option) => {
+            const isSelected = option.value === value
+            return (
+              <li key={option.value} role="option" aria-selected={isSelected}>
+                <button
+                  type="button"
+                  className={`custom-select-option-btn${isSelected ? ' custom-select-option-selected' : ''}`}
+                  onClick={() => handleSelect(option.value)}
+                >
+                  {option.label}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
@@ -331,6 +467,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     if (isSpecialEnabled) {
       return (
         <div id="lottery-container">
+          <div className="lottery-table-wrap">
           <table id="lottery-table" className="main-lottery">
             <tbody>
               {Array.from({ length: specialPerformerCount }).map((_, i) => {
@@ -345,11 +482,13 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )
     } else {
       return (
         <div id="lottery-container">
+          <div className="lottery-table-wrap">
           <table id="lottery-table" className="main-lottery">
             <tbody>
               {Array.from({ length: 7 }).map((_, i) => {
@@ -364,9 +503,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
               })}
             </tbody>
           </table>
+          </div>
 
           <h4 style={{ marginTop: '10px', marginLeft: '12px', marginBottom: '0' }}>補欠枠</h4>
 
+          <div className="lottery-table-wrap">
           <table id="lottery-table" className="backup-lottery">
             <tbody>
               {Array.from({ length: 3 }).map((_, i) => {
@@ -382,6 +523,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )
     }
@@ -620,31 +762,43 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
       <h2>抽選アイドル管理</h2>
       <div className="idol-filter-row">
         <div className="idol-filter-group">
-          <label className="appearance-filter-label">前回抽選:</label>
-          <select className="appearance-filter-select" value={prevFilter} onChange={(e) => setPrevFilter(e.target.value as 'all' | 'on' | 'off')}>
-            <option value="all">すべて</option>
-            <option value="on">ON</option>
-            <option value="off">OFF</option>
-          </select>
+          <UnifiedSelect
+            triggerClassName="appearance-filter-select"
+            value={prevFilter}
+            onChange={(nextValue) => setPrevFilter(nextValue as 'all' | 'on' | 'off')}
+            description="前回抽選"
+            options={[
+              { value: 'all', label: 'すべて' },
+              { value: 'on', label: 'ON' },
+              { value: 'off', label: 'OFF' },
+            ]}
+          />
         </div>
         <div className="idol-filter-group">
-          <label className="appearance-filter-label">抽選済:</label>
-          <select className="appearance-filter-select" value={doneFilter} onChange={(e) => setDoneFilter(e.target.value as 'all' | 'on' | 'off')}>
-            <option value="all">すべて</option>
-            <option value="on">ON</option>
-            <option value="off">OFF</option>
-          </select>
+          <UnifiedSelect
+            triggerClassName="appearance-filter-select"
+            value={doneFilter}
+            onChange={(nextValue) => setDoneFilter(nextValue as 'all' | 'on' | 'off')}
+            description="抽選済"
+            options={[
+              { value: 'all', label: 'すべて' },
+              { value: 'on', label: 'ON' },
+              { value: 'off', label: 'OFF' },
+            ]}
+          />
         </div>
         <div className="idol-filter-group">
-          <label className="appearance-filter-label">ブランド:</label>
-          <select className="appearance-filter-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
-            <option value="all">すべて</option>
-            {brands.map((brand) => (
-              <option key={brand} value={brand}>
-                {brand}
-              </option>
-            ))}
-          </select>
+          <UnifiedSelect
+            triggerClassName="appearance-filter-select"
+            menuClassName="idol-brand-menu"
+            value={brandFilter}
+            onChange={setBrandFilter}
+            description="ブランド"
+            options={[
+              { value: 'all', label: 'すべて' },
+              ...brands.map((brand) => ({ value: String(brand), label: String(brand) })),
+            ]}
+          />
         </div>
       </div>
       <h4>一括操作</h4>
@@ -761,14 +915,16 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
       <h2>演者管理</h2>
       <div className="performer-regular-setting">
         <h3>準レギュラー設定</h3>
-        <select className="appearance-filter-select" value={selectedPureRegular} onChange={(e) => setSelectedPureRegular(e.target.value)}>
-          <option value="">選択してください</option>
-          {pureRegularOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <UnifiedSelect
+          triggerClassName="appearance-filter-select"
+          value={selectedPureRegular}
+          onChange={setSelectedPureRegular}
+          placeholder="選択してください"
+          options={[
+            { value: '', label: '選択してください' },
+            ...pureRegularOptions.map((option) => ({ value: option, label: option })),
+          ]}
+        />
       </div>
       <div className="appearance-action-row">
         <button id="refresh-performers" className="lot-btn" type="button" onClick={() => void handleRefreshClick()} disabled={isRefreshing}>
@@ -791,18 +947,20 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
                 <tr key={idx} className={performer.exclude ? 'performer-row-excluded' : ''}>
                   <td className="performer-col-status performer-status-cell" onClick={() => setEditingIdx(idx)}>
                     {editingIdx === idx ? (
-                      <select
+                      <UnifiedSelect
+                        triggerClassName="performer-status-select"
+                        menuClassName="performer-status-menu"
                         value={getStatusValue(performer)}
-                        onChange={(e) => handleStatusChange(idx, e.target.value)}
-                        onBlur={() => setEditingIdx(null)}
+                        onChange={(nextValue) => handleStatusChange(idx, nextValue)}
+                        onClose={() => setEditingIdx(null)}
                         autoFocus
-                        className="performer-status-select"
-                      >
-                        <option value="normal">通常</option>
-                        <option value="exclude">除外</option>
-                        <option value="priority">優先</option>
-                        <option value="confirmed">確定</option>
-                      </select>
+                        options={[
+                          { value: 'normal', label: '通常' },
+                          { value: 'exclude', label: '除外' },
+                          { value: 'priority', label: '優先' },
+                          { value: 'confirmed', label: '確定' },
+                        ]}
+                      />
                     ) : (
                       getStatusBadges(performer)
                     )}
@@ -828,6 +986,7 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
   const [selectedVolFilter, setSelectedVolFilter] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshErrorMessage, setRefreshErrorMessage] = useState('')
+  const hasInitializedVolFilterRef = useRef(false)
 
   const getFirstStringValue = (entry: LotteryHistory, keys: string[]) => {
     for (const key of keys) {
@@ -868,11 +1027,21 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
       if (selectedVolFilter !== '') {
         setSelectedVolFilter('')
       }
+      hasInitializedVolFilterRef.current = false
       return
     }
 
     const latestVol = volFilterOptions[volFilterOptions.length - 1]
-    if (!selectedVolFilter || !volFilterOptions.includes(selectedVolFilter)) {
+
+    // 初回のみ最新Volを自動選択する。以降は「全て」の選択を維持する
+    if (!hasInitializedVolFilterRef.current && selectedVolFilter === '') {
+      setSelectedVolFilter(latestVol)
+      hasInitializedVolFilterRef.current = true
+      return
+    }
+
+    // 現在の選択が候補から消えた場合のみ最新Volへフォールバック
+    if (selectedVolFilter !== '' && !volFilterOptions.includes(selectedVolFilter)) {
       setSelectedVolFilter(latestVol)
     }
   }, [volFilterOptions, selectedVolFilter])
@@ -1030,18 +1199,16 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
       </div>
       {refreshErrorMessage && <p className="appearance-error-message">{refreshErrorMessage}</p>}
       <div className="appearance-filter-wrap">
-        <label htmlFor="appearance-vol-filter" className="appearance-filter-label">Vol絞り込み</label>
-        <select
-          id="appearance-vol-filter"
+        <UnifiedSelect
+          triggerClassName="appearance-filter-select"
           value={selectedVolFilter}
-          onChange={(e) => setSelectedVolFilter(e.target.value)}
-          className="appearance-filter-select"
-        >
-          <option value="">全て</option>
-          {volFilterOptions.map((vol) => (
-            <option key={vol} value={vol}>{vol}</option>
-          ))}
-        </select>
+          onChange={setSelectedVolFilter}
+          description="Vol絞り込み"
+          options={[
+            { value: '', label: '全て' },
+            ...volFilterOptions.map((vol) => ({ value: vol, label: vol })),
+          ]}
+        />
       </div>
       {filteredDisplayRows.length > 0 ? (
         <div className="appearance-table-wrap">
