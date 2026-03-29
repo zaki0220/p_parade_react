@@ -6,7 +6,10 @@ import puchunVideo from './assets/movie/puchun.mp4'
 import touchVideo from './assets/movie/touch.mp4'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyhZ8PUsciHHMgff651G6tjlMjeZRfoo-yeIaq0e3jCdaZ_WSA52e2xcbUJqR50VXe6/exec'
+const GAS_URL = import.meta.env.VITE_GAS_URL
+if (!GAS_URL) {
+  throw new Error('VITE_GAS_URL is not set. Please configure .env.development or .env.production.')
+}
 const PRIORITY_LOSE_THRESHOLD = 3
 const PUCHUN_TRIGGER_ID_LIST = ['2046']
 
