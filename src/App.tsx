@@ -1000,7 +1000,7 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
   )
 }
 
-function AppearancePage({ appearanceCheckStates, setAppearanceCheckStates, registerCheckStates, setRegisterCheckStates, lotteryHistory, onRefreshLotteryHistory }: { appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; registerCheckStates: { [key: number]: boolean }; setRegisterCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<void> }) {
+function AppearancePage({ appearanceCheckStates, setAppearanceCheckStates, registerCheckStates, setRegisterCheckStates, lotteryHistory, onRefreshLotteryHistory }: { appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; registerCheckStates: { [key: number]: boolean }; setRegisterCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<LotteryHistory[]> }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
   const [isRegisterCompleted, setIsRegisterCompleted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1110,7 +1110,13 @@ function AppearancePage({ appearanceCheckStates, setAppearanceCheckStates, regis
     setRefreshErrorMessage('')
     setIsRefreshing(true)
     try {
-      await onRefreshLotteryHistory()
+      const refreshedHistory = await onRefreshLotteryHistory()
+      const refreshedRows = Array.isArray(refreshedHistory)
+        ? refreshedHistory.map((entry) => getFirstStringValue(entry, ['Vol', 'vol', 'VOL'])).filter((vol) => vol)
+        : []
+      const latestVol = refreshedRows.length > 0 ? refreshedRows[refreshedRows.length - 1] : ''
+      hasInitializedVolFilterRef.current = true
+      setSelectedVolFilter(latestVol)
     } catch (error) {
       const message = error instanceof Error ? error.message : '最新情報の取得に失敗しました'
       setRefreshErrorMessage(message)
@@ -1589,7 +1595,7 @@ function App() {
     }
   }
 
-  const refreshLotteryHistory = async () => {
+  const refreshLotteryHistory = async (): Promise<LotteryHistory[]> => {
     const response = await fetch(GAS_URL)
 
     if (!response.ok) {
@@ -1599,8 +1605,10 @@ function App() {
     const data = await response.json()
     if (Array.isArray(data.lotteryHistory)) {
       setLotteryHistory(data.lotteryHistory)
+      return data.lotteryHistory as LotteryHistory[]
     } else {
       setLotteryHistory([])
+      return []
     }
   }
 
