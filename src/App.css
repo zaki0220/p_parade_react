@@ -790,17 +790,20 @@
 }
 
 #refresh-appearance,
-#refresh-performers {
+#refresh-performers,
+#refresh-idols {
 	background-color: #27ae60;
 }
 
 #refresh-appearance:hover,
-#refresh-performers:hover {
+#refresh-performers:hover,
+#refresh-idols:hover {
 	background-color: #229954;
 }
 
 #refresh-appearance:disabled,
-#refresh-performers:disabled {
+#refresh-performers:disabled,
+#refresh-idols:disabled {
 	background-color: #d0d0d0;
 	color: #666;
 	cursor: not-allowed;

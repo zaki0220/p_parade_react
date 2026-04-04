@@ -657,12 +657,14 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   )
 }
 
-function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols: Idol[]) => void }) {
+function LotteryIdolPage({ idols, setIdols, onRefreshIdols }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; onRefreshIdols: () => Promise<void> }) {
   const [prevFilter, setPrevFilter] = useState<'all' | 'on' | 'off'>('all')
   const [doneFilter, setDoneFilter] = useState<'all' | 'on' | 'off'>('all')
   const [brandFilter, setBrandFilter] = useState<string>('all')
   const [sortKey, setSortKey] = useState<'prev' | 'done' | 'name' | 'brand' | 'winCount' | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshErrorMessage, setRefreshErrorMessage] = useState('')
 
   const maxNameLength = idols.length > 0 ? Math.max(...idols.map((idol) => idol.name.length)) : 1
   const nameColumnWidth = `${maxNameLength * 10 + 20}px`
@@ -694,6 +696,19 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
   const handleResetOrder = () => {
     setSortKey(null)
     setSortOrder('asc')
+  }
+
+  const handleRefreshClick = async () => {
+    setRefreshErrorMessage('')
+    setIsRefreshing(true)
+    try {
+      await onRefreshIdols()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '最新情報の取得に失敗しました'
+      setRefreshErrorMessage(message)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const handleHeaderClick = (key: 'prev' | 'done' | 'name' | 'brand' | 'winCount') => {
@@ -812,7 +827,11 @@ function LotteryIdolPage({ idols, setIdols }: { idols: Idol[]; setIdols: (idols:
         <button id="idol-reset-order" className="lot-btn" onClick={handleResetOrder}>
           ID順にリセット
         </button>
+        <button id="refresh-idols" className="lot-btn" type="button" onClick={() => void handleRefreshClick()} disabled={isRefreshing}>
+          {isRefreshing ? '更新中...' : '最新情報に更新'}
+        </button>
       </div>
+      {refreshErrorMessage && <p className="appearance-error-message">{refreshErrorMessage}</p>}
       {filteredIdols && filteredIdols.length > 0 ? (
         <div className="appearance-table-wrap idol-table-wrap">
           <table className="appearance-table idol-table">
@@ -981,10 +1000,10 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
   )
 }
 
-function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceCheckStates, lotteryHistory, onRefreshLotteryHistory }: { idols: Idol[]; setIdols: (idols: Idol[]) => void; appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<void> }) {
+function AppearancePage({ appearanceCheckStates, setAppearanceCheckStates, registerCheckStates, setRegisterCheckStates, lotteryHistory, onRefreshLotteryHistory }: { appearanceCheckStates: { [key: number]: boolean }; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; registerCheckStates: { [key: number]: boolean }; setRegisterCheckStates: (states: { [key: number]: boolean }) => void; lotteryHistory: LotteryHistory[]; onRefreshLotteryHistory: () => Promise<LotteryHistory[]> }) {
   const [showRegisterConfirmDialog, setShowRegisterConfirmDialog] = useState(false)
   const [isRegisterCompleted, setIsRegisterCompleted] = useState(false)
-  const [isSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [registerErrorMessage, setRegisterErrorMessage] = useState('')
   const [selectedVolFilter, setSelectedVolFilter] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -1005,6 +1024,14 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     const nextChecked = !appearanceCheckStates[rowIndex]
     setAppearanceCheckStates({
       ...appearanceCheckStates,
+      [rowIndex]: nextChecked,
+    })
+  }
+
+  const handleRegisterCheckChange = (rowIndex: number) => {
+    const nextChecked = !registerCheckStates[rowIndex]
+    setRegisterCheckStates({
+      ...registerCheckStates,
       [rowIndex]: nextChecked,
     })
   }
@@ -1053,6 +1080,25 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     ? displayRows.filter((row) => row.vol === selectedVolFilter)
     : displayRows
 
+  useEffect(() => {
+    if (displayRows.length === 0) return
+
+    const visibleRowIndexSet = new Set(filteredDisplayRows.map((row) => row.rowIndex))
+    const nextStates = { ...registerCheckStates }
+    let hasChanges = false
+
+    for (const row of displayRows) {
+      if (nextStates[row.rowIndex] !== undefined) continue
+
+      nextStates[row.rowIndex] = visibleRowIndexSet.has(row.rowIndex)
+      hasChanges = true
+    }
+
+    if (hasChanges) {
+      setRegisterCheckStates(nextStates)
+    }
+  }, [displayRows, filteredDisplayRows, registerCheckStates, setRegisterCheckStates])
+
   // 出演登録ボタンクリック時の処理（確認ダイアログを表示）
   const handleRegisterClick = () => {
     setRegisterErrorMessage('')
@@ -1064,7 +1110,13 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     setRefreshErrorMessage('')
     setIsRefreshing(true)
     try {
-      await onRefreshLotteryHistory()
+      const refreshedHistory = await onRefreshLotteryHistory()
+      const refreshedRows = Array.isArray(refreshedHistory)
+        ? refreshedHistory.map((entry) => getFirstStringValue(entry, ['Vol', 'vol', 'VOL'])).filter((vol) => vol)
+        : []
+      const latestVol = refreshedRows.length > 0 ? refreshedRows[refreshedRows.length - 1] : ''
+      hasInitializedVolFilterRef.current = true
+      setSelectedVolFilter(latestVol)
     } catch (error) {
       const message = error instanceof Error ? error.message : '最新情報の取得に失敗しました'
       setRefreshErrorMessage(message)
@@ -1073,92 +1125,46 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
     }
   }
 
-  const buildSelectedResults = () => {
-    const idolById = new Map(idols.map((idol) => [String(idol.id || ''), idol]))
-    const idolByName = new Map(idols.map((idol) => [idol.name, idol]))
-
-    const results = filteredDisplayRows
-      .filter((row) => appearanceCheckStates[row.rowIndex])
-      .map((row) => {
-        const rawValues = [row.idol1, row.idol2, row.idol3]
-          .map((value) => String(value || '').trim())
-          .filter((value) => value)
-
-        const idolIds: string[] = []
-        const idolNames: string[] = []
-
-        rawValues.forEach((value) => {
-          const idolByMatchedId = idolById.get(value)
-          if (idolByMatchedId) {
-            const matchedId = String(idolByMatchedId.id || '')
-            if (matchedId && !idolIds.includes(matchedId)) idolIds.push(matchedId)
-            if (idolByMatchedId.name && !idolNames.includes(idolByMatchedId.name)) idolNames.push(idolByMatchedId.name)
-            return
-          }
-
-          const idolByMatchedName = idolByName.get(value)
-          if (idolByMatchedName) {
-            const matchedId = String(idolByMatchedName.id || '')
-            if (matchedId && !idolIds.includes(matchedId)) idolIds.push(matchedId)
-            if (idolByMatchedName.name && !idolNames.includes(idolByMatchedName.name)) idolNames.push(idolByMatchedName.name)
-            return
-          }
-
-          if (!idolNames.includes(value)) idolNames.push(value)
-        })
-
-        return {
-          performerName: row.djName,
-          type: row.category === '補欠' ? '補欠' : '通常',
-          idolIds,
-          idolNames,
-        }
-      })
-      .filter((entry) => entry.idolIds.length > 0 || entry.idolNames.length > 0)
-
-    return results
-  }
-
   // 確認後の出演登録処理
-  const handleConfirmRegister = () => {
-    const results = buildSelectedResults()
+  const handleConfirmRegister = async () => {
+    setRegisterErrorMessage('')
 
-    if (results.length === 0) {
-      setRegisterErrorMessage('更新対象の抽選アイドルデータがありません')
+    // 登録チェックが入っている行を取得
+    const targetRows = filteredDisplayRows.filter((row) => registerCheckStates[row.rowIndex])
+
+    if (targetRows.length === 0) {
+      setRegisterErrorMessage('登録対象の行が選択されていません')
       return
     }
 
-    // 1. 抽選アイドル管理タブのチェックボックスを全てリセット
-    const resetIdols = idols.map((idol) => ({
-      ...idol,
-      prev: false,
-      done: false,
+    const results = targetRows.map((row) => ({
+      performerId: lotteryHistory[row.rowIndex]['No'],
+      appearanceResult: appearanceCheckStates[row.rowIndex] || false,
     }))
 
-    // 2. チェックが入っている行のアイドルを特定
-    const checkedIdolIds = new Set<string>()
-    const checkedIdolNames = new Set<string>()
-    results.forEach((result) => {
-      result.idolIds.forEach((idolId) => {
-        checkedIdolIds.add(String(idolId))
+    setIsSubmitting(true)
+    try {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveAppearanceResults', results }),
       })
-      result.idolNames.forEach((idolName) => {
-        checkedIdolNames.add(idolName)
-      })
-    })
 
-    // 3. チェックされたアイドルの prev を true に設定
-    const updatedIdols = resetIdols.map((idol) => {
-      const idolId = String(idol.id || '')
-      if ((idolId && checkedIdolIds.has(idolId)) || checkedIdolNames.has(idol.name)) {
-        return { ...idol, prev: true }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
       }
-      return idol
-    })
 
-    setIdols(updatedIdols)
-    setRegisterErrorMessage('')
-    setIsRegisterCompleted(true)
+      const res = await response.json()
+      if (!res.success) {
+        throw new Error(typeof res.message === 'string' ? res.message : '出演登録に失敗しました')
+      }
+
+      setIsRegisterCompleted(true)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '出演登録に失敗しました'
+      setRegisterErrorMessage(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
   return (
     <section className="tab-page other-tab-page">
@@ -1169,7 +1175,7 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
               <h3>確認</h3>
             </div>
             <div className="modal-body">
-              <p>{isRegisterCompleted ? '抽選アイドルを更新しました' : '抽選アイドルを更新しますか？'}</p>
+              <p>{isRegisterCompleted ? '出演登録が完了しました' : '出演結果を登録しますか？'}</p>
               {registerErrorMessage && <p style={{ color: '#eb5757' }}>{registerErrorMessage}</p>}
             </div>
             <div className={isRegisterCompleted ? 'modal-footer modal-footer-center' : 'modal-footer'}>
@@ -1186,7 +1192,7 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
               ) : (
                 <>
                   <button className="modal-btn modal-btn-cancel" onClick={() => setShowRegisterConfirmDialog(false)} disabled={isSubmitting}>キャンセル</button>
-                  <button className="modal-btn" onClick={handleConfirmRegister} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '更新'}</button>
+                  <button className="modal-btn" onClick={() => void handleConfirmRegister()} disabled={isSubmitting}>{isSubmitting ? '送信中...' : '登録'}</button>
                 </>
               )}
             </div>
@@ -1225,6 +1231,7 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
                 <th>抽選アイドル2</th>
                 <th>抽選アイドル3</th>
                 <th className="appearance-col-check">出演</th>
+                <th className="appearance-col-check">登録</th>
               </tr>
             </thead>
             <tbody>
@@ -1241,6 +1248,14 @@ function AppearancePage({ idols, setIdols, appearanceCheckStates, setAppearanceC
                       type="checkbox"
                       checked={appearanceCheckStates[row.rowIndex] || false}
                       onChange={() => handleAppearanceCheckChange(row.rowIndex)}
+                      className="appearance-check-input"
+                    />
+                  </td>
+                  <td className="appearance-col-check">
+                    <input
+                      type="checkbox"
+                      checked={registerCheckStates[row.rowIndex] || false}
+                      onChange={() => handleRegisterCheckChange(row.rowIndex)}
                       className="appearance-check-input"
                     />
                   </td>
@@ -1397,6 +1412,18 @@ const tabs: { key: TabKey; label: string }[] = [
 ]
 
 function App() {
+  const toBooleanFromSheetValue = (value: unknown): boolean => {
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'number') return value !== 0
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase()
+      if (!normalized) return false
+      if (normalized === 'false' || normalized === '0' || normalized === 'off' || normalized === 'no') return false
+      return true
+    }
+    return false
+  }
+
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMenuClosing, setIsMenuClosing] = useState(false)
   const menuCloseStartTimerRef = useRef<number | null>(null)
@@ -1497,6 +1524,10 @@ function App() {
     const saved = localStorage.getItem('appearanceCheckStates')
     return saved ? JSON.parse(saved) : {}
   })
+  const [registerCheckStates, setRegisterCheckStates] = useState<{ [key: number]: boolean }>(() => {
+    const saved = localStorage.getItem('registerCheckStates')
+    return saved ? JSON.parse(saved) : {}
+  })
   const [backupCheckStates, setBackupCheckStates] = useState<{ [key: number]: boolean }>(() => {
     const saved = localStorage.getItem('backupCheckStates')
     return saved ? JSON.parse(saved) : {}
@@ -1540,7 +1571,31 @@ function App() {
     }
   }
 
-  const refreshLotteryHistory = async () => {
+  const refreshIdols = async () => {
+    const response = await fetch(GAS_URL)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+    if (Array.isArray(data.idols)) {
+      const refreshedIdols = data.idols.map((newItem: Idol) => {
+        const parsedWinCount = Number(newItem.winCount)
+        return {
+          ...newItem,
+          winCount: Number.isFinite(parsedWinCount) ? parsedWinCount : 0,
+          prev: toBooleanFromSheetValue(newItem.lastWin),
+          done: false,
+        }
+      })
+      setIdols(refreshedIdols)
+    } else {
+      setIdols([])
+    }
+  }
+
+  const refreshLotteryHistory = async (): Promise<LotteryHistory[]> => {
     const response = await fetch(GAS_URL)
 
     if (!response.ok) {
@@ -1550,8 +1605,10 @@ function App() {
     const data = await response.json()
     if (Array.isArray(data.lotteryHistory)) {
       setLotteryHistory(data.lotteryHistory)
+      return data.lotteryHistory as LotteryHistory[]
     } else {
       setLotteryHistory([])
+      return []
     }
   }
 
@@ -1563,11 +1620,16 @@ function App() {
         const data = await response.json()
         console.log(data)
 
-        // Idolsのマージ処理
-        if (data.idols) {
+        // Idolsの更新処理
+        if (Array.isArray(data.idols)) {
           const mergedIdols = data.idols.map((newItem: Idol) => {
-            const oldItem = idols.find((o) => o.id === newItem.id)
-            return { ...newItem, prev: oldItem ? oldItem.prev : false, done: oldItem ? oldItem.done : false }
+            const parsedWinCount = Number(newItem.winCount)
+            return {
+              ...newItem,
+              winCount: Number.isFinite(parsedWinCount) ? parsedWinCount : 0,
+              prev: toBooleanFromSheetValue(newItem.lastWin),
+              done: false,
+            }
           })
           setIdols(mergedIdols)
         }
@@ -1649,6 +1711,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('appearanceCheckStates', JSON.stringify(appearanceCheckStates))
   }, [appearanceCheckStates])
+
+  useEffect(() => {
+    localStorage.setItem('registerCheckStates', JSON.stringify(registerCheckStates))
+  }, [registerCheckStates])
 
   useEffect(() => {
     localStorage.setItem('backupCheckStates', JSON.stringify(backupCheckStates))
@@ -1749,11 +1815,11 @@ function App() {
       case 'lottery':
         return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
       case 'lotteryIdol':
-        return <LotteryIdolPage idols={idols} setIdols={setIdols} />
+        return <LotteryIdolPage idols={idols} setIdols={setIdols} onRefreshIdols={refreshIdols} />
       case 'performer':
         return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} onRefreshPerformers={refreshPerformers} />
       case 'appearance':
-        return <AppearancePage idols={idols} setIdols={setIdols} appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} lotteryHistory={lotteryHistory} onRefreshLotteryHistory={refreshLotteryHistory} />
+        return <AppearancePage appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} registerCheckStates={registerCheckStates} setRegisterCheckStates={setRegisterCheckStates} lotteryHistory={lotteryHistory} onRefreshLotteryHistory={refreshLotteryHistory} />
       case 'settings':
         return (
           <SettingsPage
