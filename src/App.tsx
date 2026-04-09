@@ -11,7 +11,7 @@ if (!GAS_URL) {
   throw new Error('VITE_GAS_URL is not set. Please configure .env.development or .env.production.')
 }
 const PRIORITY_LOSE_THRESHOLD = 3
-const PUCHUN_TRIGGER_ID_LIST = ['2046']
+const PUCHUN_TRIGGER_ID_LIST = ['2046','1012']
 
 type Idol = {
   id?: string
