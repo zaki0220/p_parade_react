@@ -187,6 +187,65 @@ function UnifiedSelect({ value, options, onChange, triggerClassName, menuClassNa
   )
 }
 
+function AutoShrinkText({ text, className, maxFontSize = 35, minFontSize = 14 }: { text: string; className?: string; maxFontSize?: number; minFontSize?: number }) {
+  const textRef = useRef<HTMLSpanElement | null>(null)
+
+  useEffect(() => {
+    const textEl = textRef.current
+    const containerEl = textEl?.parentElement
+    if (!textEl || !containerEl) return
+
+    let frameId = 0
+
+    const adjustFontSize = () => {
+      if (!textRef.current) return
+      const currentTextEl = textRef.current
+      const currentContainerEl = currentTextEl.parentElement
+      if (!currentContainerEl) return
+
+      let nextFontSize = maxFontSize
+      currentTextEl.style.fontSize = `${nextFontSize}px`
+
+      while (nextFontSize > minFontSize && currentTextEl.scrollWidth > currentContainerEl.clientWidth) {
+        nextFontSize -= 1
+        currentTextEl.style.fontSize = `${nextFontSize}px`
+      }
+    }
+
+    const scheduleAdjust = () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
+      frameId = requestAnimationFrame(() => {
+        adjustFontSize()
+      })
+    }
+
+    scheduleAdjust()
+
+    const observer = new ResizeObserver(() => {
+      scheduleAdjust()
+    })
+    observer.observe(containerEl)
+
+    window.addEventListener('resize', scheduleAdjust)
+
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
+      observer.disconnect()
+      window.removeEventListener('resize', scheduleAdjust)
+    }
+  }, [text, maxFontSize, minFontSize])
+
+  return (
+    <span ref={textRef} className={className}>
+      {text}
+    </span>
+  )
+}
+
 function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
@@ -478,7 +537,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
                 const idolResult = idolLotteryResults[i]
                 return (
                   <tr key={i} className="row-regular">
-                    <td>{name}</td>
+                    <td>{name ? <AutoShrinkText text={name} className="lottery-performer-name-text" /> : ''}</td>
                     <td>{name ? (idolResult ? renderIdolImages(idolResult) : <button className="lottery-execution-btn" onClick={() => handleIdolLottery(i)}>アイドル抽選</button>) : ''}</td>
                   </tr>
                 )
@@ -499,7 +558,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
                 const idolResult = idolLotteryResults[i]
                 return (
                   <tr key={i} className={i === 0 ? 'row-semi-regular' : 'row-regular'}>
-                    <td>{name}</td>
+                    <td>{name ? <AutoShrinkText text={name} className="lottery-performer-name-text" /> : ''}</td>
                     <td>{name ? (idolResult ? renderIdolImages(idolResult) : <button className="lottery-execution-btn" onClick={() => handleIdolLottery(i)}>アイドル抽選</button>) : ''}</td>
                   </tr>
                 )
@@ -519,7 +578,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
                 const idolResult = idolLotteryResults[rowIndex]
                 return (
                   <tr key={i} className="row-backup">
-                    <td>{name}</td>
+                    <td>{name ? <AutoShrinkText text={name} className="lottery-performer-name-text" /> : ''}</td>
                     <td>{name ? (idolResult ? renderIdolImages(idolResult) : <button className="lottery-execution-btn" onClick={() => handleIdolLottery(rowIndex)}>アイドル抽選</button>) : ''}</td>
                   </tr>
                 )
