@@ -969,6 +969,17 @@
 	font-family: 'Kosugi Maru', sans-serif;
 	font-size: 35px;
 	color: #333;
+	padding: 0 10px;
+	overflow: hidden;
+}
+
+.lottery-performer-name-text {
+	display: block;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.2;
 }
 
 /* --- 音量調節 --- */
