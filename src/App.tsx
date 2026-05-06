@@ -1600,10 +1600,14 @@ function App() {
       const lastBackup = Number(p.lastBackup) || 0
       const lastJoin = Number(p.lastJoin) || 0
 
+      const isExclude = p.exclude === true || String(p.exclude).toUpperCase() === 'TRUE'
+      const isConfirmed = !isExclude && lastWin > lastJoin
+      const isPriority = !isExclude && !isConfirmed && (loseCount >= PRIORITY_LOSE_THRESHOLD || lastBackup > lastJoin)
+
       return {
-        exclude: p.exclude === true || p.exclude === 'TRUE',
-        priority: loseCount >= PRIORITY_LOSE_THRESHOLD || lastBackup > lastJoin,
-        confirmed: lastWin > lastJoin,
+        exclude: isExclude,
+        priority: isPriority,
+        confirmed: isConfirmed,
         name: p.name || '',
         twitterId: p.twitterId || '',
         joinCount: p.joinCount || 0,
