@@ -331,7 +331,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const handlePriorityWin = () => {
     // 優先ステータスを持つ演者名を取得
     const priorityNames = performers
-      .filter(p => p.priority === true)
+      .filter(p => p.priority === true && p.exclude !== true)
       .map(p => p.name)
 
     // 現在のテーブルに既に表示されている名前を取得
