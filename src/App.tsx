@@ -206,7 +206,7 @@ function AutoShrinkText({ text, className, maxFontSize = 35, minFontSize = 14 }:
       let nextFontSize = maxFontSize
       currentTextEl.style.fontSize = `${nextFontSize}px`
 
-      while (nextFontSize > minFontSize && currentTextEl.scrollWidth > currentContainerEl.clientWidth) {
+      while (nextFontSize > minFontSize && currentTextEl.scrollWidth > currentTextEl.offsetWidth) {
         nextFontSize -= 1
         currentTextEl.style.fontSize = `${nextFontSize}px`
       }
