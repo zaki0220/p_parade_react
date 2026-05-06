@@ -206,7 +206,7 @@ function AutoShrinkText({ text, className, maxFontSize = 35, minFontSize = 14 }:
       let nextFontSize = maxFontSize
       currentTextEl.style.fontSize = `${nextFontSize}px`
 
-      while (nextFontSize > minFontSize && currentTextEl.scrollWidth > currentContainerEl.clientWidth) {
+      while (nextFontSize > minFontSize && currentTextEl.scrollWidth > currentTextEl.offsetWidth) {
         nextFontSize -= 1
         currentTextEl.style.fontSize = `${nextFontSize}px`
       }
@@ -331,7 +331,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const handlePriorityWin = () => {
     // 優先ステータスを持つ演者名を取得
     const priorityNames = performers
-      .filter(p => p.priority === true)
+      .filter(p => p.priority === true && p.exclude !== true)
       .map(p => p.name)
 
     // 現在のテーブルに既に表示されている名前を取得
@@ -1600,10 +1600,14 @@ function App() {
       const lastBackup = Number(p.lastBackup) || 0
       const lastJoin = Number(p.lastJoin) || 0
 
+      const isExclude = p.exclude === true || String(p.exclude).toUpperCase() === 'TRUE'
+      const isConfirmed = !isExclude && lastWin > lastJoin
+      const isPriority = !isExclude && !isConfirmed && (loseCount >= PRIORITY_LOSE_THRESHOLD || lastBackup > lastJoin)
+
       return {
-        exclude: p.exclude === true || p.exclude === 'TRUE',
-        priority: loseCount >= PRIORITY_LOSE_THRESHOLD || lastBackup > lastJoin,
-        confirmed: lastWin > lastJoin,
+        exclude: isExclude,
+        priority: isPriority,
+        confirmed: isConfirmed,
         name: p.name || '',
         twitterId: p.twitterId || '',
         joinCount: p.joinCount || 0,
