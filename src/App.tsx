@@ -1483,6 +1483,11 @@ function App() {
     return false
   }
 
+  const getPerformerSourceFromResponse = (data: { performers?: Performer[]; performersAnniv?: Performer[] }) => {
+    const source = isSpecialEnabled ? data.performersAnniv : data.performers
+    return Array.isArray(source) ? source : []
+  }
+
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMenuClosing, setIsMenuClosing] = useState(false)
   const menuCloseStartTimerRef = useRef<number | null>(null)
@@ -1522,6 +1527,7 @@ function App() {
   const autoSaveInFlightRef = useRef(false)
   const lastAutoSavedPayloadRef = useRef('')
   const autoSaveFirstEvaluationDoneRef = useRef(false)
+  const hasInitializedPerformerModeRef = useRef(false)
   const [activeTab, setActiveTab] = useState<TabKey>('lottery')
   const [volCount, setVolCount] = useState(() => {
     const saved = localStorage.getItem('volCount')
@@ -1627,11 +1633,7 @@ function App() {
     }
 
     const data = await response.json()
-    if (Array.isArray(data.performers)) {
-      setPerformers(buildProcessedPerformers(data.performers))
-    } else {
-      setPerformers([])
-    }
+    setPerformers(buildProcessedPerformers(getPerformerSourceFromResponse(data)))
   }
 
   const refreshIdols = async () => {
@@ -1698,9 +1700,7 @@ function App() {
         }
 
         // Performersのマージ処理と計算
-        if (data.performers) {
-          setPerformers(buildProcessedPerformers(data.performers))
-        }
+        setPerformers(buildProcessedPerformers(getPerformerSourceFromResponse(data)))
 
         if (Array.isArray(data.lotteryHistory)) {
           setLotteryHistory(data.lotteryHistory)
@@ -1713,6 +1713,15 @@ function App() {
     }
     loadFromSpreadsheet()
   }, [])
+
+  useEffect(() => {
+    if (!hasInitializedPerformerModeRef.current) {
+      hasInitializedPerformerModeRef.current = true
+      return
+    }
+
+    void refreshPerformers()
+  }, [isSpecialEnabled])
 
   // LocalStorageに保存
   useEffect(() => {
