@@ -246,7 +246,7 @@ function AutoShrinkText({ text, className, maxFontSize = 35, minFontSize = 14 }:
   )
 }
 
-function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, selectedPureRegulars, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; selectedPureRegulars: string[]; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
+function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, specialIdolLotteryCount, selectedPureRegular, selectedPureRegulars, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; specialIdolLotteryCount: number; selectedPureRegular: string; selectedPureRegulars: string[]; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
   const [showNoRegularDialog, setShowNoRegularDialog] = useState(false)
@@ -434,8 +434,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       return false
     }
 
-    // 最大3人をランダムに選ぶ
-    const selectedCount = Math.min(3, availableIdols.length)
+    // 抽選人数を決定（特殊回時のみ設定値を適用）
+    const normalizedSpecialCount = Math.max(1, Math.min(3, specialIdolLotteryCount))
+    const targetCount = isSpecialEnabled ? normalizedSpecialCount : 3
+    const selectedCount = Math.min(targetCount, availableIdols.length)
     const selectedIdols: Idol[] = []
     const usedIndices = new Set<number>()
 
@@ -1401,7 +1403,7 @@ function AppearancePage({ appearanceCheckStates, setAppearanceCheckStates, regis
   )
 }
 
-function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEnabled, specialVolText, setSpecialVolText, specialPerformerCount, setSpecialPerformerCount, volume, setVolume, isMuted, setIsMuted, isPuchunEnabled, setIsPuchunEnabled, isIdolLotteryEffectEnabled, setIsIdolLotteryEffectEnabled }: { volCount: number; setVolCount: (val: number) => void; isSpecialEnabled: boolean; setIsSpecialEnabled: (val: boolean) => void; specialVolText: string; setSpecialVolText: (val: string) => void; specialPerformerCount: number; setSpecialPerformerCount: (val: number) => void; volume: number; setVolume: (val: number) => void; isMuted: boolean; setIsMuted: (val: boolean) => void; isPuchunEnabled: boolean; setIsPuchunEnabled: (val: boolean) => void; isIdolLotteryEffectEnabled: boolean; setIsIdolLotteryEffectEnabled: (val: boolean) => void }) {
+function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEnabled, specialVolText, setSpecialVolText, specialPerformerCount, setSpecialPerformerCount, specialIdolLotteryCount, setSpecialIdolLotteryCount, volume, setVolume, isMuted, setIsMuted, isPuchunEnabled, setIsPuchunEnabled, isIdolLotteryEffectEnabled, setIsIdolLotteryEffectEnabled }: { volCount: number; setVolCount: (val: number) => void; isSpecialEnabled: boolean; setIsSpecialEnabled: (val: boolean) => void; specialVolText: string; setSpecialVolText: (val: string) => void; specialPerformerCount: number; setSpecialPerformerCount: (val: number) => void; specialIdolLotteryCount: number; setSpecialIdolLotteryCount: (val: number) => void; volume: number; setVolume: (val: number) => void; isMuted: boolean; setIsMuted: (val: boolean) => void; isPuchunEnabled: boolean; setIsPuchunEnabled: (val: boolean) => void; isIdolLotteryEffectEnabled: boolean; setIsIdolLotteryEffectEnabled: (val: boolean) => void }) {
   const [isDragging, setIsDragging] = useState(false)
 
   return (
@@ -1453,6 +1455,19 @@ function SettingsPage({ volCount, setVolCount, isSpecialEnabled, setIsSpecialEna
             min="0"
             value={specialPerformerCount}
             onChange={(e) => setSpecialPerformerCount(Number(e.target.value))}
+          />
+        </div>
+        <h3>特殊回時の抽選アイドル数</h3>
+        <div className="settings-input-row">
+          <UnifiedSelect
+            triggerClassName="appearance-filter-select"
+            value={String(specialIdolLotteryCount)}
+            onChange={(nextValue) => setSpecialIdolLotteryCount(Math.max(1, Math.min(3, Number(nextValue) || 1)))}
+            options={[
+              { value: '1', label: '1' },
+              { value: '2', label: '2' },
+              { value: '3', label: '3' },
+            ]}
           />
         </div>
       </div>
@@ -1542,6 +1557,11 @@ const tabs: { key: TabKey; label: string }[] = [
 ]
 
 function App() {
+  const normalizeSpecialIdolLotteryCount = (value: number): number => {
+    if (!Number.isFinite(value)) return 3
+    return Math.max(1, Math.min(3, value))
+  }
+
   const toBooleanFromSheetValue = (value: unknown): boolean => {
     if (typeof value === 'boolean') return value
     if (typeof value === 'number') return value !== 0
@@ -1615,6 +1635,10 @@ function App() {
   const [specialPerformerCount, setSpecialPerformerCount] = useState(() => {
     const saved = localStorage.getItem('specialPerformerCount')
     return saved ? Number(saved) : 0
+  })
+  const [specialIdolLotteryCount, setSpecialIdolLotteryCount] = useState(() => {
+    const saved = localStorage.getItem('specialIdolLotteryCount')
+    return saved ? normalizeSpecialIdolLotteryCount(Number(saved)) : 3
   })
   const [volume, setVolume] = useState(() => {
     const saved = localStorage.getItem('volume')
@@ -1828,6 +1852,10 @@ function App() {
   }, [specialPerformerCount])
 
   useEffect(() => {
+    localStorage.setItem('specialIdolLotteryCount', String(normalizeSpecialIdolLotteryCount(specialIdolLotteryCount)))
+  }, [specialIdolLotteryCount])
+
+  useEffect(() => {
     localStorage.setItem('volume', String(volume))
   }, [volume])
 
@@ -1977,7 +2005,7 @@ function App() {
   const renderPage = () => {
     switch (activeTab) {
       case 'lottery':
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} selectedPureRegulars={selectedPureRegulars} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} specialIdolLotteryCount={specialIdolLotteryCount} selectedPureRegular={selectedPureRegular} selectedPureRegulars={selectedPureRegulars} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
       case 'lotteryIdol':
         return <LotteryIdolPage idols={idols} setIdols={setIdols} onRefreshIdols={refreshIdols} />
       case 'performer':
@@ -1995,6 +2023,8 @@ function App() {
             setSpecialVolText={setSpecialVolText}
             specialPerformerCount={specialPerformerCount}
             setSpecialPerformerCount={setSpecialPerformerCount}
+            specialIdolLotteryCount={specialIdolLotteryCount}
+            setSpecialIdolLotteryCount={setSpecialIdolLotteryCount}
             volume={volume}
             setVolume={setVolume}
             isMuted={isMuted}
@@ -2006,7 +2036,7 @@ function App() {
           />
         )
       default:
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} selectedPureRegulars={selectedPureRegulars} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} specialIdolLotteryCount={specialIdolLotteryCount} selectedPureRegular={selectedPureRegular} selectedPureRegulars={selectedPureRegulars} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
     }
   }
 
