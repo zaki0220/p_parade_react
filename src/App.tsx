@@ -246,7 +246,7 @@ function AutoShrinkText({ text, className, maxFontSize = 35, minFontSize = 14 }:
   )
 }
 
-function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
+function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerformerCount, selectedPureRegular, selectedPureRegulars, performers, lotteryTableData, setLotteryTableData, performerLotteryTypes, setPerformerLotteryTypes, idols, setIdols, idolLotteryResults, setIdolLotteryResults, setAppearanceCheckStates, setBackupCheckStates, volume, isMuted, isPuchunEnabled, isIdolLotteryEffectEnabled }: { volCount: number; isSpecialEnabled: boolean; specialVolText: string; specialPerformerCount: number; selectedPureRegular: string; selectedPureRegulars: string[]; performers: Performer[]; lotteryTableData: string[]; setLotteryTableData: (data: string[]) => void; performerLotteryTypes: { [key: string]: PerformerLotteryType }; setPerformerLotteryTypes: (types: { [key: string]: PerformerLotteryType }) => void; idols: Idol[]; setIdols: (idols: Idol[]) => void; idolLotteryResults: { [key: number]: IdolLotteryResult }; setIdolLotteryResults: (results: { [key: number]: IdolLotteryResult }) => void; setAppearanceCheckStates: (states: { [key: number]: boolean }) => void; setBackupCheckStates: (states: { [key: number]: boolean }) => void; volume: number; isMuted: boolean; isPuchunEnabled: boolean; isIdolLotteryEffectEnabled: boolean }) {
   const [showNoTargetDialog, setShowNoTargetDialog] = useState(false)
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
   const [showNoRegularDialog, setShowNoRegularDialog] = useState(false)
@@ -258,6 +258,19 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const deresuteVideoRef = useRef<HTMLVideoElement | null>(null)
   const puchunVideoRef = useRef<HTMLVideoElement | null>(null)
   const touchVideoRef = useRef<HTMLVideoElement | null>(null)
+  const reservedPureRegularCount = isSpecialEnabled ? Math.min(4, selectedPureRegulars.length) : 1
+
+  const getDisplayedNames = () => {
+    const fixedNames = isSpecialEnabled ? selectedPureRegulars : [selectedPureRegular]
+    return new Set([...fixedNames, ...lotteryTableData].filter((name) => name))
+  }
+
+  const getLotterySlotCount = () => {
+    if (isSpecialEnabled) {
+      return Math.max(0, specialPerformerCount - reservedPureRegularCount)
+    }
+    return 9
+  }
 
   useEffect(() => {
     const normalizedVolume = Math.min(100, Math.max(0, volume)) / 100
@@ -289,10 +302,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       .map(p => p.name)
 
     // 現在のテーブルに既に表示されている名前を取得
-    const displayedNames = new Set([selectedPureRegular, ...lotteryTableData].filter(n => n))
+    const displayedNames = getDisplayedNames()
 
     // テーブルに表示されていない確定演者を追加
-    const maxRows = isSpecialEnabled ? specialPerformerCount : 9
+    const maxRows = getLotterySlotCount()
     const newTableData = [...lotteryTableData]
     const newLotteryTypes = { ...performerLotteryTypes }
     let addedCount = 0
@@ -335,10 +348,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       .map(p => p.name)
 
     // 現在のテーブルに既に表示されている名前を取得
-    const displayedNames = new Set([selectedPureRegular, ...lotteryTableData].filter(n => n))
+    const displayedNames = getDisplayedNames()
 
     // テーブルに空きがあるかチェック
-    const maxRows = isSpecialEnabled ? specialPerformerCount : 9
+    const maxRows = getLotterySlotCount()
     if (lotteryTableData.length >= maxRows) {
       setShowNoPriorityDialog(true)
       return
@@ -373,10 +386,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       .map(p => p.name)
 
     // 現在のテーブルに既に表示されている名前を取得
-    const displayedNames = new Set([selectedPureRegular, ...lotteryTableData].filter(n => n))
+    const displayedNames = getDisplayedNames()
 
     // テーブルに空きがあるかチェック
-    const maxRows = isSpecialEnabled ? specialPerformerCount : 9
+    const maxRows = getLotterySlotCount()
     if (lotteryTableData.length >= maxRows) {
       setShowNoRegularDialog(true)
       return
@@ -449,7 +462,13 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
     // 行の1列目の名前を取得
     let rowName = ''
-    if (rowIndex === 0) {
+    if (isSpecialEnabled) {
+      if (rowIndex < reservedPureRegularCount) {
+        rowName = selectedPureRegulars[rowIndex] || ''
+      } else {
+        rowName = lotteryTableData[rowIndex - reservedPureRegularCount] || ''
+      }
+    } else if (rowIndex === 0) {
       rowName = selectedPureRegular
     } else if (rowIndex >= 1 && rowIndex <= 6) {
       rowName = lotteryTableData[rowIndex - 1] || ''
@@ -533,7 +552,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
           <table id="lottery-table" className="main-lottery">
             <tbody>
               {Array.from({ length: specialPerformerCount }).map((_, i) => {
-                const name = i === 0 ? selectedPureRegular : lotteryTableData[i - 1] || ''
+                const name = i < reservedPureRegularCount ? selectedPureRegulars[i] || '' : lotteryTableData[i - reservedPureRegularCount] || ''
                 const idolResult = idolLotteryResults[i]
                 return (
                   <tr key={i} className="row-regular">
@@ -943,11 +962,13 @@ function LotteryIdolPage({ idols, setIdols, onRefreshIdols }: { idols: Idol[]; s
   )
 }
 
-function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers, setPerformers, onRefreshPerformers }: { selectedPureRegular: string; setSelectedPureRegular: (val: string) => void; performers: Performer[]; setPerformers: (performers: Performer[]) => void; onRefreshPerformers: () => Promise<void> }) {
+function PerformerPage({ selectedPureRegular, setSelectedPureRegular, selectedPureRegulars, setSelectedPureRegulars, isSpecialEnabled, performers, setPerformers, onRefreshPerformers }: { selectedPureRegular: string; setSelectedPureRegular: (val: string) => void; selectedPureRegulars: string[]; setSelectedPureRegulars: (vals: string[]) => void; isSpecialEnabled: boolean; performers: Performer[]; setPerformers: (performers: Performer[]) => void; onRefreshPerformers: () => Promise<void> }) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshErrorMessage, setRefreshErrorMessage] = useState('')
+  const [specialSelectionValue, setSpecialSelectionValue] = useState('')
   const pureRegularOptions = ["colorfu√", "MitsubaProject", "わたげ改", "黒糖"]
+  const availableSpecialOptions = pureRegularOptions.filter((option) => !selectedPureRegulars.includes(option))
 
   const getStatusBadges = (performer: Performer) => {
     const badges = []
@@ -991,21 +1012,71 @@ function PerformerPage({ selectedPureRegular, setSelectedPureRegular, performers
     }
   }
 
+  const handleAddSpecialPureRegular = (nextValue: string) => {
+    if (!nextValue) return
+    if (selectedPureRegulars.includes(nextValue)) {
+      setSpecialSelectionValue('')
+      return
+    }
+    if (selectedPureRegulars.length >= 4) {
+      setSpecialSelectionValue('')
+      return
+    }
+    setSelectedPureRegulars([...selectedPureRegulars, nextValue])
+    setSpecialSelectionValue('')
+  }
+
+  const handleRemoveSpecialPureRegular = (target: string) => {
+    setSelectedPureRegulars(selectedPureRegulars.filter((name) => name !== target))
+  }
+
   return (
     <section className="tab-page other-tab-page">
       <h2>演者管理</h2>
       <div className="performer-regular-setting">
         <h3>準レギュラー設定</h3>
-        <UnifiedSelect
-          triggerClassName="appearance-filter-select"
-          value={selectedPureRegular}
-          onChange={setSelectedPureRegular}
-          placeholder="選択してください"
-          options={[
-            { value: '', label: '選択してください' },
-            ...pureRegularOptions.map((option) => ({ value: option, label: option })),
-          ]}
-        />
+        {isSpecialEnabled ? (
+          <div className="special-pure-regular-panel">
+            <UnifiedSelect
+              triggerClassName="appearance-filter-select"
+              value={specialSelectionValue}
+              onChange={handleAddSpecialPureRegular}
+              placeholder={selectedPureRegulars.length >= 4 ? '上限に達しています' : '追加する準レギュラーを選択'}
+              options={[
+                { value: '', label: selectedPureRegulars.length >= 4 ? '上限に達しています' : '選択してください' },
+                ...availableSpecialOptions.map((option) => ({ value: option, label: option })),
+              ]}
+              disabled={selectedPureRegulars.length >= 4 || availableSpecialOptions.length === 0}
+            />
+            <p className="special-pure-regular-count">選択中: {selectedPureRegulars.length}/4</p>
+            <div className="selected-pure-regular-list">
+              {selectedPureRegulars.map((name) => (
+                <div key={name} className="selected-pure-regular-chip">
+                  <span className="selected-pure-regular-name">{name}</span>
+                  <button
+                    type="button"
+                    className="selected-pure-regular-remove"
+                    aria-label={`${name}を削除`}
+                    onClick={() => handleRemoveSpecialPureRegular(name)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <UnifiedSelect
+            triggerClassName="appearance-filter-select"
+            value={selectedPureRegular}
+            onChange={setSelectedPureRegular}
+            placeholder="選択してください"
+            options={[
+              { value: '', label: '選択してください' },
+              ...pureRegularOptions.map((option) => ({ value: option, label: option })),
+            ]}
+          />
+        )}
       </div>
       <div className="appearance-action-row">
         <button id="refresh-performers" className="lot-btn" type="button" onClick={() => void handleRefreshClick()} disabled={isRefreshing}>
@@ -1565,6 +1636,22 @@ function App() {
     const saved = localStorage.getItem('selectedPureRegular')
     return saved || ''
   })
+  const [selectedPureRegulars, setSelectedPureRegulars] = useState<string[]>(() => {
+    const savedList = localStorage.getItem('selectedPureRegulars')
+    if (savedList) {
+      try {
+        const parsed = JSON.parse(savedList)
+        if (Array.isArray(parsed)) {
+          return Array.from(new Set(parsed.map((item) => String(item)).filter((item) => item))).slice(0, 4)
+        }
+      } catch {
+        // no-op
+      }
+    }
+
+    const savedSingle = localStorage.getItem('selectedPureRegular')
+    return savedSingle ? [savedSingle] : []
+  })
   const [idols, setIdols] = useState<Idol[]>(() => {
     const saved = localStorage.getItem('idols')
     return saved ? JSON.parse(saved) : []
@@ -1761,6 +1848,10 @@ function App() {
   }, [selectedPureRegular])
 
   useEffect(() => {
+    localStorage.setItem('selectedPureRegulars', JSON.stringify(selectedPureRegulars))
+  }, [selectedPureRegulars])
+
+  useEffect(() => {
     localStorage.setItem('idols', JSON.stringify(idols))
   }, [idols])
 
@@ -1799,13 +1890,14 @@ function App() {
     }
 
     const totalRows = isSpecialEnabled ? specialPerformerCount : 10
+    const reservedPureRegularCount = isSpecialEnabled ? Math.min(4, selectedPureRegulars.length) : 1
 
     if (totalRows <= 0) return
 
     const getPerformerNameByRowIndex = (rowIndex: number): string => {
       if (isSpecialEnabled) {
-        if (rowIndex === 0) return selectedPureRegular
-        return lotteryTableData[rowIndex - 1] || ''
+        if (rowIndex < reservedPureRegularCount) return selectedPureRegulars[rowIndex] || ''
+        return lotteryTableData[rowIndex - reservedPureRegularCount] || ''
       }
 
       if (rowIndex === 0) return selectedPureRegular
@@ -1880,16 +1972,16 @@ function App() {
     }
 
     void saveToGAS()
-  }, [idolLotteryResults, lotteryTableData, selectedPureRegular, isSpecialEnabled, specialPerformerCount, specialVolText, volCount])
+  }, [idolLotteryResults, lotteryTableData, selectedPureRegular, selectedPureRegulars, isSpecialEnabled, specialPerformerCount, specialVolText, volCount])
 
   const renderPage = () => {
     switch (activeTab) {
       case 'lottery':
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} selectedPureRegulars={selectedPureRegulars} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
       case 'lotteryIdol':
         return <LotteryIdolPage idols={idols} setIdols={setIdols} onRefreshIdols={refreshIdols} />
       case 'performer':
-        return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} performers={performers} setPerformers={setPerformers} onRefreshPerformers={refreshPerformers} />
+        return <PerformerPage selectedPureRegular={selectedPureRegular} setSelectedPureRegular={setSelectedPureRegular} selectedPureRegulars={selectedPureRegulars} setSelectedPureRegulars={setSelectedPureRegulars} isSpecialEnabled={isSpecialEnabled} performers={performers} setPerformers={setPerformers} onRefreshPerformers={refreshPerformers} />
       case 'appearance':
         return <AppearancePage appearanceCheckStates={appearanceCheckStates} setAppearanceCheckStates={setAppearanceCheckStates} registerCheckStates={registerCheckStates} setRegisterCheckStates={setRegisterCheckStates} lotteryHistory={lotteryHistory} onRefreshLotteryHistory={refreshLotteryHistory} />
       case 'settings':
@@ -1914,7 +2006,7 @@ function App() {
           />
         )
       default:
-        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
+        return <LotteryPage volCount={volCount} isSpecialEnabled={isSpecialEnabled} specialVolText={specialVolText} specialPerformerCount={specialPerformerCount} selectedPureRegular={selectedPureRegular} selectedPureRegulars={selectedPureRegulars} performers={performers} lotteryTableData={lotteryTableData} setLotteryTableData={setLotteryTableData} performerLotteryTypes={performerLotteryTypes} setPerformerLotteryTypes={setPerformerLotteryTypes} idols={idols} setIdols={setIdols} idolLotteryResults={idolLotteryResults} setIdolLotteryResults={setIdolLotteryResults} setAppearanceCheckStates={setAppearanceCheckStates} setBackupCheckStates={setBackupCheckStates} volume={volume} isMuted={isMuted} isPuchunEnabled={isPuchunEnabled} isIdolLotteryEffectEnabled={isIdolLotteryEffectEnabled} />
     }
   }
 
