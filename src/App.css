@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Kavoon&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&display=swap');
 
 #tab-view {
 	background-color: #ffffff;
@@ -1282,6 +1283,174 @@
 
 .modal-btn-danger:hover {
 	background-color: #ff5252;
+}
+
+.name-entry-dialog {
+	max-width: none;
+	width: 53vw;
+	height: 66vh;
+	border-radius: 50px;
+	border: 1px solid #8a8a8a;
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+	display: flex;
+	flex-direction: column;
+	font-family: 'M PLUS Rounded 1c', 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+}
+
+.name-entry-overlay {
+	background-color: rgba(0, 0, 0, 0);
+}
+
+.name-entry-header {
+	padding: 14px 34px;
+	background: linear-gradient(to bottom, #e8da86 0%, #d4c46b 100%);
+	border-bottom: 1px solid #b8b8b8;
+	display: flex;
+	align-items: center;
+	gap: calc(7% - 22px);
+}
+
+.name-entry-title-icon {
+	width: 22px;
+	height: 44px;
+	flex: 0 0 auto;
+	background-image:
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%),
+		radial-gradient(circle, #111 58%, transparent 60%);
+	background-size: 8px 8px, 8px 8px, 8px 8px, 8px 8px, 8px 8px, 8px 8px, 8px 8px, 8px 8px;
+	background-position: 0 0, 14px 0, 0 12px, 14px 12px, 0 24px, 14px 24px, 0 36px, 14px 36px;
+	background-repeat: no-repeat;
+}
+
+.name-entry-header h3 {
+	font-family: 'M PLUS Rounded 1c', 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 48px;
+	font-weight: 700;
+	line-height: 1.1;
+	color: #3b3b3b;
+	margin: 0;
+}
+
+.name-entry-body {
+	padding: 46px 34px 26px;
+	background-color: #fAfAfA;
+	flex: 1;
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	grid-template-rows: 1fr auto 1fr auto 1fr auto 1fr;
+	justify-items: center;
+	align-items: center;
+	text-align: center;
+}
+
+.name-entry-body p.name-entry-description,
+.name-entry-warning {
+	width: auto;
+	box-sizing: border-box;
+	grid-column: 2;
+	justify-self: stretch;
+	margin-left: 0;
+	margin-right: 0;
+	text-align: left;
+	padding-left: 0;
+	text-indent: 0;
+}
+
+.name-entry-body p.name-entry-description {
+	display: block;
+	font-family: 'M PLUS Rounded 1c', 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 30px;
+	font-weight: 600;
+	line-height: 1.2;
+	color: #444;
+	margin-top: 0;
+	margin-bottom: 0;
+	white-space: nowrap;
+	grid-row: 2;
+	grid-column: 2;
+	justify-self: center;
+}
+
+.name-entry-box {
+	grid-column: 1 / -1;
+	font-family: 'M PLUS Rounded 1c', 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	width: 86%;
+	height: 64px;
+	padding: 10px 14px;
+	background-color: #b7b7b7;
+	border: 2px solid #8d8d8d;
+	border-radius: 14px;
+	font-size: 34px;
+	font-weight: 600;
+	line-height: 1;
+	color: #333;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	word-break: normal;
+	margin: 0;
+	text-align: center;
+	justify-self: center;
+	grid-row: 4;
+}
+
+.name-entry-warning {
+	display: block;
+	margin: 0;
+	grid-row: 6;
+	grid-column: 2;
+	justify-self: center;
+}
+
+.name-entry-body p.name-entry-warning-line {
+	margin: 0;
+	font-family: 'M PLUS Rounded 1c', 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	font-size: 30px;
+	line-height: 1.2;
+	font-weight: 600;
+	color: #ff2ea3;
+	text-align: left;
+	white-space: nowrap;
+	padding-left: 0;
+	text-indent: 0;
+}
+
+.name-entry-warning-mark {
+	display: inline-block;
+	margin-right: 3px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+.name-entry-ok-btn {
+	font-family: 'M PLUS Rounded 1c', 'Kosugi Maru', 'Noto Sans JP', sans-serif;
+	min-width: 290px;
+	padding: 16px 56px;
+	border-radius: 999px;
+	background-color: #ffffff;
+	color: #111;
+	border: 1px solid #5f646b;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36), 0 1px 1px rgba(0, 0, 0, 0.18);
+	font-size: 36px;
+}
+
+.name-entry-ok-btn:hover {
+	background-color: #ffffff;
+}
+
+.name-entry-dialog .modal-footer {
+	padding: 20px 24px 22px;
+	background-color: #b8b8b8;
 }
 
 /* ------------------------------------------------------------------

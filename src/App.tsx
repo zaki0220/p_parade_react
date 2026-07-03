@@ -251,6 +251,10 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const [showNoPriorityDialog, setShowNoPriorityDialog] = useState(false)
   const [showNoRegularDialog, setShowNoRegularDialog] = useState(false)
   const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false)
+  const [showPerformerResultDialog, setShowPerformerResultDialog] = useState(false)
+  const [isPerformerResultDialogReady, setIsPerformerResultDialogReady] = useState(false)
+  const [selectedPerformerNames, setSelectedPerformerNames] = useState<string[]>([])
+  const [typingPerformerNames, setTypingPerformerNames] = useState('')
   const [showVideoOverlay, setShowVideoOverlay] = useState(false)
   const [showPuchunVideo, setShowPuchunVideo] = useState(false)
   const [showTouchVideo, setShowTouchVideo] = useState(false)
@@ -295,6 +299,57 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     }
   }, [showVideoOverlay, showPuchunVideo, showTouchVideo])
 
+  useEffect(() => {
+    if (!showPerformerResultDialog) {
+      setIsPerformerResultDialogReady(false)
+      return
+    }
+
+    setIsPerformerResultDialogReady(false)
+    const fallbackTimerId = window.setTimeout(() => {
+      setIsPerformerResultDialogReady(true)
+    }, 320)
+
+    return () => {
+      window.clearTimeout(fallbackTimerId)
+    }
+  }, [showPerformerResultDialog])
+
+  useEffect(() => {
+    const fullText = selectedPerformerNames.length > 0 ? selectedPerformerNames.join(' / ') : ''
+
+    if (!showPerformerResultDialog || !isPerformerResultDialogReady) {
+      setTypingPerformerNames('')
+      return
+    }
+
+    if (!fullText) {
+      setTypingPerformerNames('')
+      return
+    }
+
+    let currentIndex = 0
+    setTypingPerformerNames('')
+
+    const timerId = window.setInterval(() => {
+      currentIndex += 1
+      setTypingPerformerNames(fullText.slice(0, currentIndex))
+
+      if (currentIndex >= fullText.length) {
+        window.clearInterval(timerId)
+      }
+    }, 150)
+
+    return () => {
+      window.clearInterval(timerId)
+    }
+  }, [showPerformerResultDialog, selectedPerformerNames, isPerformerResultDialogReady])
+
+  const closePerformerResultDialog = () => {
+    setShowPerformerResultDialog(false)
+    setIsPerformerResultDialogReady(false)
+  }
+
   const handleConfirmedWin = () => {
     // 確定ステータスを持つ演者名を取得
     const confirmedNames = performers
@@ -309,11 +364,13 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     const newTableData = [...lotteryTableData]
     const newLotteryTypes = { ...performerLotteryTypes }
     let addedCount = 0
+    const addedNames: string[] = []
 
     for (let i = 0; i < confirmedNames.length && newTableData.length < maxRows; i++) {
       if (!displayedNames.has(confirmedNames[i])) {
         newTableData.push(confirmedNames[i])
         newLotteryTypes[confirmedNames[i]] = '確定'
+        addedNames.push(confirmedNames[i])
         addedCount++
       }
     }
@@ -325,6 +382,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
     setLotteryTableData(newTableData)
     setPerformerLotteryTypes(newLotteryTypes)
+    setSelectedPerformerNames(addedNames)
+    setShowPerformerResultDialog(true)
   }
 
   const handleClearLottery = () => {
@@ -377,6 +436,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       ...performerLotteryTypes,
       [foundName]: '優先',
     })
+    setSelectedPerformerNames([foundName])
+    setShowPerformerResultDialog(true)
   }
 
   const handleRegularWin = () => {
@@ -412,6 +473,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       ...performerLotteryTypes,
       [selectedName]: '通常',
     })
+    setSelectedPerformerNames([selectedName])
+    setShowPerformerResultDialog(true)
   }
 
   const handleIdolLottery = (rowIndex: number) => {
@@ -707,6 +770,33 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
             <div className="modal-footer">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowClearConfirmDialog(false)}>キャンセル</button>
               <button className="modal-btn modal-btn-danger" onClick={handleConfirmClear}>リセット</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPerformerResultDialog && (
+        <div className="modal-overlay name-entry-overlay" onClick={closePerformerResultDialog}>
+          <div
+            className="modal-dialog name-entry-dialog"
+            onClick={(e) => e.stopPropagation()}
+            onAnimationEnd={() => setIsPerformerResultDialogReady(true)}
+          >
+            <div className="modal-header name-entry-header">
+              <span className="name-entry-title-icon" aria-hidden="true" />
+              <h3>名前入力</h3>
+            </div>
+            <div className="modal-body name-entry-body">
+              <p className="name-entry-description">プロデューサー名を入力してください</p>
+              <div className="name-entry-box">
+                {typingPerformerNames}
+              </div>
+              <div className="name-entry-warning" role="note" aria-live="polite">
+                <p className="name-entry-warning-line">　10文字以内で入力してください</p>
+                <p className="name-entry-warning-line">　プロデューサー名は後から変更できます</p>
+              </div>
+            </div>
+            <div className="modal-footer modal-footer-center">
+              <button className="modal-btn name-entry-ok-btn" onClick={closePerformerResultDialog}>OK</button>
             </div>
           </div>
         </div>
