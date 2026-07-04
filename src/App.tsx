@@ -4,6 +4,8 @@ import logoImage from './assets/etc/NewP_Parade_logo.png'
 import deresuteVideo from './assets/movie/deresute.webm'
 import puchunVideo from './assets/movie/puchun.mp4'
 import touchVideo from './assets/movie/touch.mp4'
+import popSound from './assets/sound/pop.wav'
+import okSound from './assets/sound/OK.wav'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
 const GAS_URL = import.meta.env.VITE_GAS_URL
@@ -49,6 +51,11 @@ type LotteryHistory = {
   idol2Name?: string
   idol3Name?: string
   [key: string]: unknown
+}
+
+type PendingPerformerTableEntry = {
+  name: string
+  type: PerformerLotteryType
 }
 
 type SelectOption = {
@@ -254,6 +261,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const [showPerformerResultDialog, setShowPerformerResultDialog] = useState(false)
   const [isPerformerResultDialogReady, setIsPerformerResultDialogReady] = useState(false)
   const [selectedPerformerNames, setSelectedPerformerNames] = useState<string[]>([])
+  const [pendingPerformerTableEntries, setPendingPerformerTableEntries] = useState<PendingPerformerTableEntry[]>([])
   const [typingPerformerNames, setTypingPerformerNames] = useState('')
   const [showVideoOverlay, setShowVideoOverlay] = useState(false)
   const [showPuchunVideo, setShowPuchunVideo] = useState(false)
@@ -262,6 +270,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
   const deresuteVideoRef = useRef<HTMLVideoElement | null>(null)
   const puchunVideoRef = useRef<HTMLVideoElement | null>(null)
   const touchVideoRef = useRef<HTMLVideoElement | null>(null)
+  const dialogPopAudioRef = useRef<HTMLAudioElement | null>(null)
+  const dialogOkAudioRef = useRef<HTMLAudioElement | null>(null)
   const reservedPureRegularCount = isSpecialEnabled ? Math.min(4, selectedPureRegulars.length) : 1
 
   const getDisplayedNames = () => {
@@ -286,6 +296,38 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       video.muted = isMuted
     })
   }, [volume, isMuted, showVideoOverlay, showPuchunVideo, showTouchVideo])
+
+  useEffect(() => {
+    const popAudio = new Audio(popSound)
+    popAudio.preload = 'auto'
+    dialogPopAudioRef.current = popAudio
+
+    const okAudio = new Audio(okSound)
+    okAudio.preload = 'auto'
+    dialogOkAudioRef.current = okAudio
+
+    return () => {
+      popAudio.pause()
+      okAudio.pause()
+      dialogPopAudioRef.current = null
+      dialogOkAudioRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const normalizedVolume = Math.min(100, Math.max(0, volume)) / 100
+    const popAudio = dialogPopAudioRef.current
+    const okAudio = dialogOkAudioRef.current
+
+    if (popAudio) {
+      popAudio.volume = normalizedVolume
+      popAudio.muted = isMuted
+    }
+    if (okAudio) {
+      okAudio.volume = normalizedVolume
+      okAudio.muted = isMuted
+    }
+  }, [volume, isMuted])
 
   // Prevent scrolling when video overlay is active
   useEffect(() => {
@@ -312,6 +354,19 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
     return () => {
       window.clearTimeout(fallbackTimerId)
+    }
+  }, [showPerformerResultDialog])
+
+  useEffect(() => {
+    if (!showPerformerResultDialog) return
+
+    const audio = dialogPopAudioRef.current
+    if (!audio) return
+
+    audio.currentTime = 0
+    const playPromise = audio.play()
+    if (playPromise !== undefined) {
+      playPromise.catch(() => undefined)
     }
   }, [showPerformerResultDialog])
 
@@ -345,7 +400,48 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     }
   }, [showPerformerResultDialog, selectedPerformerNames, isPerformerResultDialogReady])
 
+  useEffect(() => {
+    if (showPerformerResultDialog) return
+    if (pendingPerformerTableEntries.length === 0) return
+
+    const displayedNames = getDisplayedNames()
+    const maxRows = getLotterySlotCount()
+    const nextTableData = [...lotteryTableData]
+    const nextLotteryTypes = { ...performerLotteryTypes }
+
+    for (const entry of pendingPerformerTableEntries) {
+      if (nextTableData.length >= maxRows) break
+      if (displayedNames.has(entry.name) || nextLotteryTypes[entry.name]) continue
+
+      nextTableData.push(entry.name)
+      nextLotteryTypes[entry.name] = entry.type
+      displayedNames.add(entry.name)
+    }
+
+    setLotteryTableData(nextTableData)
+    setPerformerLotteryTypes(nextLotteryTypes)
+    setPendingPerformerTableEntries([])
+  }, [
+    showPerformerResultDialog,
+    pendingPerformerTableEntries,
+    lotteryTableData,
+    performerLotteryTypes,
+    selectedPureRegular,
+    selectedPureRegulars,
+    isSpecialEnabled,
+    specialPerformerCount,
+  ])
+
   const closePerformerResultDialog = () => {
+    const okAudio = dialogOkAudioRef.current
+    if (okAudio) {
+      okAudio.currentTime = 0
+      const playPromise = okAudio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => undefined)
+      }
+    }
+
     setShowPerformerResultDialog(false)
     setIsPerformerResultDialogReady(false)
   }
@@ -361,15 +457,11 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
 
     // テーブルに表示されていない確定演者を追加
     const maxRows = getLotterySlotCount()
-    const newTableData = [...lotteryTableData]
-    const newLotteryTypes = { ...performerLotteryTypes }
     let addedCount = 0
     const addedNames: string[] = []
 
-    for (let i = 0; i < confirmedNames.length && newTableData.length < maxRows; i++) {
+    for (let i = 0; i < confirmedNames.length && lotteryTableData.length + addedCount < maxRows; i++) {
       if (!displayedNames.has(confirmedNames[i])) {
-        newTableData.push(confirmedNames[i])
-        newLotteryTypes[confirmedNames[i]] = '確定'
         addedNames.push(confirmedNames[i])
         addedCount++
       }
@@ -380,8 +472,7 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       return
     }
 
-    setLotteryTableData(newTableData)
-    setPerformerLotteryTypes(newLotteryTypes)
+    setPendingPerformerTableEntries(addedNames.map((name) => ({ name, type: '確定' })))
     setSelectedPerformerNames(addedNames)
     setShowPerformerResultDialog(true)
   }
@@ -430,12 +521,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
       return
     }
 
-    // テーブルに追加
-    setLotteryTableData([...lotteryTableData, foundName])
-    setPerformerLotteryTypes({
-      ...performerLotteryTypes,
-      [foundName]: '優先',
-    })
+    // テーブル反映はダイアログを閉じた後に行う
+    setPendingPerformerTableEntries([{ name: foundName, type: '優先' }])
     setSelectedPerformerNames([foundName])
     setShowPerformerResultDialog(true)
   }
@@ -467,12 +554,8 @@ function LotteryPage({ volCount, isSpecialEnabled, specialVolText, specialPerfor
     const randomIndex = Math.floor(Math.random() * availableNames.length)
     const selectedName = availableNames[randomIndex]
 
-    // テーブルに追加
-    setLotteryTableData([...lotteryTableData, selectedName])
-    setPerformerLotteryTypes({
-      ...performerLotteryTypes,
-      [selectedName]: '通常',
-    })
+    // テーブル反映はダイアログを閉じた後に行う
+    setPendingPerformerTableEntries([{ name: selectedName, type: '通常' }])
     setSelectedPerformerNames([selectedName])
     setShowPerformerResultDialog(true)
   }
