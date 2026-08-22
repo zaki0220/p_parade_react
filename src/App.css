@@ -780,8 +780,13 @@
 	gap: 8px;
 }
 
-#idol-reset-checks {
+#idol-check-all {
 	background-color: #3498db;
+	margin-top: 0;
+}
+
+#idol-reset-checks {
+	background-color: #eb5757;
 	margin-top: 0;
 }
 
