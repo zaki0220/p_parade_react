@@ -8,10 +8,7 @@ import popSound from './assets/sound/pop.wav'
 import okSound from './assets/sound/OK.wav'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
-const GAS_URL = import.meta.env.VITE_GAS_URL
-if (!GAS_URL) {
-  throw new Error('VITE_GAS_URL is not set. Please configure .env.development or .env.production.')
-}
+const GAS_URL = import.meta.env.VITE_GAS_URL || '/gas-api'
 const PRIORITY_LOSE_THRESHOLD = 3
 const PUCHUN_TRIGGER_ID_LIST = ['2046']
 
@@ -937,33 +934,12 @@ function LotteryIdolPage({ idols, setIdols, onRefreshIdols }: { idols: Idol[]; s
     setIdols(updatedIdols)
   }
 
-  const handleCheckAllCheckboxes = () => {
-    const visibleIdSet = new Set(filteredIdols.map((idol) => String(idol.id)).filter(Boolean))
-
-    const updatedIdols = idols.map((idol) => {
-      if (!visibleIdSet.has(String(idol.id))) return idol
-      return {
-        ...idol,
-        prev: true,
-        done: true,
-      }
-    })
-
-    setIdols(updatedIdols)
-  }
-
   const handleResetAllCheckboxes = () => {
-    const visibleIdSet = new Set(filteredIdols.map((idol) => String(idol.id)).filter(Boolean))
-
-    const updatedIdols = idols.map((idol) => {
-      if (!visibleIdSet.has(String(idol.id))) return idol
-      return {
-        ...idol,
-        prev: false,
-        done: false,
-      }
-    })
-
+    const updatedIdols = idols.map((idol) => ({
+      ...idol,
+      prev: false,
+      done: false,
+    }))
     setIdols(updatedIdols)
   }
 
@@ -1095,9 +1071,6 @@ function LotteryIdolPage({ idols, setIdols, onRefreshIdols }: { idols: Idol[]; s
       </div>
       <h4>一括操作</h4>
       <div className="idol-bulk-actions">
-        <button id="idol-check-all" className="lot-btn" onClick={handleCheckAllCheckboxes}>
-          全チェック
-        </button>
         <button id="idol-reset-checks" className="lot-btn" onClick={handleResetAllCheckboxes}>
           全チェック解除
         </button>
