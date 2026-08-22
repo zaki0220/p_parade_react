@@ -8,10 +8,7 @@ import popSound from './assets/sound/pop.wav'
 import okSound from './assets/sound/OK.wav'
 
 type TabKey = 'lottery' | 'lotteryIdol' | 'performer' | 'appearance' | 'settings'
-const GAS_URL = import.meta.env.VITE_GAS_URL
-if (!GAS_URL) {
-  throw new Error('VITE_GAS_URL is not set. Please configure .env.development or .env.production.')
-}
+const GAS_URL = import.meta.env.VITE_GAS_URL || '/gas-api'
 const PRIORITY_LOSE_THRESHOLD = 3
 const PUCHUN_TRIGGER_ID_LIST = ['2046']
 
