@@ -934,12 +934,23 @@ function LotteryIdolPage({ idols, setIdols, onRefreshIdols }: { idols: Idol[]; s
     setIdols(updatedIdols)
   }
 
+  const handleSetAllCheckboxes = () => {
+    const visibleIdols = new Set(filteredIdols)
+    const updatedIdols = idols.map((idol) => (
+      visibleIdols.has(idol)
+        ? { ...idol, prev: true, done: true }
+        : idol
+    ))
+    setIdols(updatedIdols)
+  }
+
   const handleResetAllCheckboxes = () => {
-    const updatedIdols = idols.map((idol) => ({
-      ...idol,
-      prev: false,
-      done: false,
-    }))
+    const visibleIdols = new Set(filteredIdols)
+    const updatedIdols = idols.map((idol) => (
+      visibleIdols.has(idol)
+        ? { ...idol, prev: false, done: false }
+        : idol
+    ))
     setIdols(updatedIdols)
   }
 
@@ -1071,6 +1082,9 @@ function LotteryIdolPage({ idols, setIdols, onRefreshIdols }: { idols: Idol[]; s
       </div>
       <h4>一括操作</h4>
       <div className="idol-bulk-actions">
+        <button id="idol-set-checks" className="lot-btn" onClick={handleSetAllCheckboxes}>
+          全チェック
+        </button>
         <button id="idol-reset-checks" className="lot-btn" onClick={handleResetAllCheckboxes}>
           全チェック解除
         </button>
